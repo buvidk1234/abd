@@ -1,6 +1,7 @@
 package service
 
 import (
+	"backend/internal/dto"
 	"backend/internal/model"
 	"context"
 	"errors"
@@ -103,34 +104,23 @@ func (u *UserService) UpdateUserInfo(ctx context.Context, req UpdateUserInfoReq)
 }
 
 type GetUsersPublicInfoReq struct {
-	UserIDs []string `json:"userIDs" binding:"required"`
+	UserIDs []string `json:"userIDs"`
 }
 
-// UserDTO
-type UserDTO struct {
-	UserID    string `json:"userID"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatarURL"`
-	Gender    int32  `json:"gender"`
-	Signature string `json:"signature"`
-}
-
-func (u *UserService) GetUsersPublicInfo(ctx context.Context, req GetUsersPublicInfoReq) ([]UserDTO, error) {
+func (u *UserService) GetUsersPublicInfo(ctx context.Context, req GetUsersPublicInfoReq) ([]dto.UserInfo, error) {
 	var users []model.User
-	if err := u.db.WithContext(ctx).Find(&users, "user_id IN ?", req.UserIDs).Error; err != nil {
-		return nil, err
+	if len(req.UserIDs) == 0 {
+		u.db.WithContext(ctx).Find(&users)
+	} else {
+		if err := u.db.WithContext(ctx).Find(&users, "user_id IN ?", req.UserIDs).Error; err != nil {
+			return nil, err
+		}
 	}
-	var userDTOs []UserDTO
+	var userInfos []dto.UserInfo
 	for _, user := range users {
-		userDTOs = append(userDTOs, UserDTO{
-			UserID:    user.UserID,
-			Nickname:  user.Nickname,
-			AvatarURL: user.AvatarURL,
-			Gender:    user.Gender,
-			Signature: user.Signature,
-		})
+		userInfos = append(userInfos, dto.ConvertToUserInfo(user))
 	}
-	return userDTOs, nil
+	return userInfos, nil
 }
 
 type UserLoginReq struct {
@@ -143,7 +133,7 @@ func (u *UserService) UserLogin(ctx context.Context, req UserLoginReq) error {
 	if err := u.db.WithContext(ctx).First(&user, "username = ?", req.Username).Error; err != nil {
 		return errors.New("用户不存在")
 	}
-	// 这里应使用加密库比对密码
+	//使用加密库比对密码
 	bytePassword := []byte(req.Password)
 	byteHashedPassword := []byte(user.PasswordHash)
 	return bcrypt.CompareHashAndPassword(byteHashedPassword, bytePassword)

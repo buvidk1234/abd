@@ -50,12 +50,12 @@ func (a *UserApi) GetUsersPublicInfo(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "参数错误"})
 		return
 	}
-	userDTOs, err := a.userService.GetUsersPublicInfo(c.Request.Context(), req)
+	userInfos, err := a.userService.GetUsersPublicInfo(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"users": userDTOs})
+	c.JSON(200, gin.H{"userInfos": userInfos})
 }
 
 func (a *UserApi) UserLogin(c *gin.Context) {

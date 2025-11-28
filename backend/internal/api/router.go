@@ -28,6 +28,21 @@ func NewGinRouter() *gin.Engine {
 		userRouterGroup.POST("/get_users_info", u.GetUsersPublicInfo)
 		userRouterGroup.POST("/user_login", u.UserLogin)
 	}
+	// friend routes
+	f := NewFriendApi(*service.NewFriendService(database.GetDB()))
+	{
+		friendRouterGroup := r.Group("/friend")
+		friendRouterGroup.POST("/add_friend", f.ApplyToAddFriend)
+		friendRouterGroup.POST("/add_friend_response", f.RespondFriendApply)
+		friendRouterGroup.POST("/get_friend_list", f.GetFriendList)
+		friendRouterGroup.POST("/get_specified_friends_info", f.GetSpecifiedFriendsInfo)
+		friendRouterGroup.POST("/delete_friend", f.DeleteFriend)
+		friendRouterGroup.POST("/add_black", f.AddBlack)
+		friendRouterGroup.POST("/remove_black", f.RemoveBlack)
+		friendRouterGroup.POST("/get_black_list", f.GetPaginationBlacks)
+		friendRouterGroup.POST("/get_friend_apply_list", f.GetFriendApplyList)
+		friendRouterGroup.POST("/get_self_friend_apply_list", f.GetSelfApplyList)
+	}
 
 	return r
 }
