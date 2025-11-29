@@ -44,5 +44,21 @@ func NewGinRouter() *gin.Engine {
 		friendRouterGroup.POST("/get_self_friend_apply_list", f.GetSelfApplyList)
 	}
 
+	// Group
+	g := NewGroupApi(service.NewGroupService(database.GetDB()))
+	{
+		groupRouterGroup := r.Group("/group")
+		groupRouterGroup.POST("/create_group", g.CreateGroup)                 // 创建群组
+		groupRouterGroup.POST("/get_groups_info", g.GetGroupsInfo)            // 获取群组信息
+		groupRouterGroup.POST("/get_group_member_list", g.GetGroupMemberList) // 获取群成员列表
+		groupRouterGroup.POST("/join_group", g.JoinGroup)                     // 加入群组
+		groupRouterGroup.POST("/quit_group", g.QuitGroup)                     // 退出群组
+		groupRouterGroup.POST("/invite_user_to_group", g.InviteUserToGroup)   // 邀请进群
+		groupRouterGroup.POST("/kick_group", g.KickGroupMember)               // 踢人
+		groupRouterGroup.POST("/dismiss_group", g.DismissGroup)               // 解散群组
+		groupRouterGroup.POST("/set_group_info", g.SetGroupInfo)              // 设置群信息
+		groupRouterGroup.POST("/set_group_member_info", g.SetGroupMemberInfo) // 设置群成员信息
+	}
+
 	return r
 }
