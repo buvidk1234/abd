@@ -10,8 +10,8 @@ type FriendApi struct {
 	friendService *service.FriendService
 }
 
-func NewFriendApi(friendService service.FriendService) *FriendApi {
-	return &FriendApi{friendService: &friendService}
+func NewFriendApi(friendService *service.FriendService) *FriendApi {
+	return &FriendApi{friendService: friendService}
 }
 
 // 申请添加好友

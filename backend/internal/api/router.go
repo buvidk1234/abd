@@ -29,7 +29,7 @@ func NewGinRouter() *gin.Engine {
 		userRouterGroup.POST("/user_login", u.UserLogin)
 	}
 	// friend routes
-	f := NewFriendApi(*service.NewFriendService(database.GetDB()))
+	f := NewFriendApi(service.NewFriendService(database.GetDB()))
 	{
 		friendRouterGroup := r.Group("/friend")
 		friendRouterGroup.POST("/add_friend", f.ApplyToAddFriend)
