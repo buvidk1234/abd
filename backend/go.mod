@@ -7,7 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/gin-gonic/gin v1.11.0
-	github.com/golang-jwt/jwt/v4 v4.5.2
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/openimsdk/tools v0.0.49
 	go.mongodb.org/mongo-driver v1.17.6

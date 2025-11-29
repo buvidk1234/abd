@@ -18,6 +18,8 @@ func NewGinRouter() *gin.Engine {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Next()
 	})
+	// auth
+	r.Use(AuthMiddleware())
 
 	// user routes
 	u := NewUserApi(service.NewUserService(database.GetDB()))
