@@ -1,11 +1,11 @@
 package service
 
 import (
+	"backend/internal/api/apiresp/errs"
 	"backend/internal/dto"
 	"backend/internal/model"
 	"backend/pkg/util"
 	"context"
-	"errors"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -37,7 +37,7 @@ func (u *UserService) UserRegister(ctx context.Context, req UserRegisterReq) (st
 		return "", err
 	}
 	if count > 0 {
-		return "", gorm.ErrDuplicatedKey
+		return "", errs.ErrUserExists
 	}
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	user := model.User{
@@ -132,13 +132,13 @@ type UserLoginReq struct {
 func (u *UserService) UserLogin(ctx context.Context, req UserLoginReq) (string, error) {
 	var user model.User
 	if err := u.db.WithContext(ctx).First(&user, "username = ?", req.Username).Error; err != nil {
-		return "", errors.New("用户不存在")
+		return "", errs.ErrUserNotFound
 	}
 	//使用加密库比对密码
 	bytePassword := []byte(req.Password)
 	byteHashedPassword := []byte(user.PasswordHash)
 	if bcrypt.CompareHashAndPassword(byteHashedPassword, bytePassword) != nil {
-		return "", errors.New("密码错误")
+		return "", errs.ErrUserPasswordWrong
 	}
 	token, err := util.GenerateToken(user.UserID)
 	if err != nil {

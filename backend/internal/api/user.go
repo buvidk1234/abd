@@ -1,6 +1,8 @@
 package api
 
 import (
+	"backend/internal/api/apiresp"
+	"backend/internal/api/apiresp/errs"
 	"backend/internal/service"
 	"backend/pkg/util"
 
@@ -19,58 +21,58 @@ func NewUserApi(userService *service.UserService) *UserApi {
 func (a *UserApi) UserRegister(c *gin.Context) {
 	var req service.UserRegisterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "参数错误"})
+		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
 	userID, err := a.userService.UserRegister(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		apiresp.GinError(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"userID": userID})
+	apiresp.GinSuccess(c, userID)
 }
 
 // UpdateUserInfo 更新用户信息
 func (a *UserApi) UpdateUserInfo(c *gin.Context) {
 	var req service.UpdateUserInfoReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "参数错误"})
+		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
 	err := a.userService.UpdateUserInfo(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		apiresp.GinError(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"msg": "更新成功"})
+	apiresp.GinSuccess(c, nil)
 }
 
 func (a *UserApi) GetUsersPublicInfo(c *gin.Context) {
 	var req service.GetUsersPublicInfoReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "参数错误"})
+		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
 	userInfos, err := a.userService.GetUsersPublicInfo(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		apiresp.GinError(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"userInfos": userInfos})
+	apiresp.GinSuccess(c, userInfos)
 }
 
 func (a *UserApi) UserLogin(c *gin.Context) {
 	var req service.UserLoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "参数错误"})
+		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
 	token, err := a.userService.UserLogin(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		apiresp.GinError(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"token": token})
+	apiresp.GinSuccess(c, token)
 }
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -84,7 +86,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 获取 Authorization Header
 		token := c.GetHeader("Authorization")
 		if token == "" {
-			c.JSON(401, gin.H{"error": "Authorization token is required"})
+			c.JSON(401, gin.H{"error": "Authorization header is required"})
 			c.Abort() // 终止请求
 			return
 		}
