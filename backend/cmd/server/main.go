@@ -16,6 +16,10 @@ func main() {
 	db.AutoMigrate(&model.GroupRequest{})
 	db.AutoMigrate(&model.GroupMember{})
 
+	db.AutoMigrate(&model.Message{})
+	db.AutoMigrate(&model.Conversation{})
+	db.AutoMigrate(&model.SeqConversation{})
+
 	r := api.NewGinRouter()
 
 	r.Run()
