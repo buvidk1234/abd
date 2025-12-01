@@ -21,6 +21,18 @@ const (
 	ErrCodeFriendRequestSent     = 12003
 	ErrCodeFriendRequestNotFound = 12004
 	ErrCodeFriendBlocked         = 12005
+
+	// 群组相关
+	ErrCodeGroupNotFound            = 13001
+	ErrCodeGroupDismissed           = 13002
+	ErrCodeGroupMemberNotFound      = 13003
+	ErrCodeGroupPermissionDenied    = 13004
+	ErrCodeGroupOwnerCannotQuit     = 13005
+	ErrCodeGroupCannotRemoveOwner   = 13006
+	ErrCodeGroupUseQuitGroup        = 13007
+	ErrCodeGroupOnlyOwnerCanSetRole = 13008
+	ErrCodeGroupRoleLevelTooHigh    = 13009
+	ErrCodeGroupQuitSelfOnly        = 13010
 )
 
 // 常用错误变量
@@ -43,6 +55,18 @@ var (
 	ErrFriendRequestSent     = NewCodeError(ErrCodeFriendRequestSent, "好友请求已发送")
 	ErrFriendRequestNotFound = NewCodeError(ErrCodeFriendRequestNotFound, "好友请求不存在")
 	ErrFriendBlocked         = NewCodeError(ErrCodeFriendBlocked, "好友已被拉黑")
+
+	// 群组相关
+	ErrGroupNotFound            = NewCodeError(ErrCodeGroupNotFound, "群组不存在")
+	ErrGroupDismissed           = NewCodeError(ErrCodeGroupDismissed, "群组已解散")
+	ErrGroupMemberNotFound      = NewCodeError(ErrCodeGroupMemberNotFound, "群成员不存在")
+	ErrGroupPermissionDenied    = NewCodeError(ErrCodeGroupPermissionDenied, "群权限不足")
+	ErrGroupOwnerCannotQuit     = NewCodeError(ErrCodeGroupOwnerCannotQuit, "群主无法直接退出，请先解散群组")
+	ErrGroupCannotRemoveOwner   = NewCodeError(ErrCodeGroupCannotRemoveOwner, "无法移除群主")
+	ErrGroupUseQuitGroup        = NewCodeError(ErrCodeGroupUseQuitGroup, "请使用退出群组接口")
+	ErrGroupOnlyOwnerCanSetRole = NewCodeError(ErrCodeGroupOnlyOwnerCanSetRole, "只有群主可以调整角色等级")
+	ErrGroupRoleLevelTooHigh    = NewCodeError(ErrCodeGroupRoleLevelTooHigh, "不能将角色设置为高于自身的等级")
+	ErrGroupQuitSelfOnly        = NewCodeError(ErrCodeGroupQuitSelfOnly, "只能退出自己的群成员关系")
 )
 
 // CodeError 结构体和构造函数

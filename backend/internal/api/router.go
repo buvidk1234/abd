@@ -1,9 +1,15 @@
 package api
 
 import (
+	"backend/docs"
 	"backend/internal/service"
+	"time"
 
 	"backend/internal/pkg/database"
+
+	"github.com/gin-contrib/cors"
+	swaggerFiles "github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,11 +19,17 @@ func NewGinRouter() *gin.Engine {
 
 	r.GET("/ws", WsHandler)
 
+	// swag init -g cmd/server/main.go -d ./ -o ./docs
+	docs.SwaggerInfo.BasePath = "/"
+
 	// middlewares
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Next()
-	})
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:  []string{"*"},
+		AllowMethods:  []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:  []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders: []string{"Content-Length"},
+		MaxAge:        12 * time.Hour,
+	}))
 	// auth
 	r.Use(AuthMiddleware())
 
@@ -49,17 +61,17 @@ func NewGinRouter() *gin.Engine {
 	// Group
 	g := NewGroupApi(service.NewGroupService(database.GetDB()))
 	{
-		groupRouterGroup := r.Group("/group")
-		groupRouterGroup.POST("/create_group", g.CreateGroup)                 // 创建群组
-		groupRouterGroup.POST("/get_groups_info", g.GetGroupsInfo)            // 获取群组信息
-		groupRouterGroup.POST("/get_group_member_list", g.GetGroupMemberList) // 获取群成员列表
-		groupRouterGroup.POST("/join_group", g.JoinGroup)                     // 加入群组
-		groupRouterGroup.POST("/quit_group", g.QuitGroup)                     // 退出群组
-		groupRouterGroup.POST("/invite_user_to_group", g.InviteUserToGroup)   // 邀请进群
-		groupRouterGroup.POST("/kick_group", g.KickGroupMember)               // 踢人
-		groupRouterGroup.POST("/dismiss_group", g.DismissGroup)               // 解散群组
-		groupRouterGroup.POST("/set_group_info", g.SetGroupInfo)              // 设置群信息
-		groupRouterGroup.POST("/set_group_member_info", g.SetGroupMemberInfo) // 设置群成员信息
+		groupRouterGroup := r.Group("/groups")
+		groupRouterGroup.POST("", g.CreateGroup)                                // 创建群组
+		groupRouterGroup.GET("", g.GetGroupsInfo)                               // 获取群组信息
+		groupRouterGroup.GET("/:id/members", g.GetGroupMemberList)              // 获取群成员列表
+		groupRouterGroup.POST("/:id/join", g.JoinGroup)                         // 加入群组/申请进群
+		groupRouterGroup.DELETE("/:id/members/:userID", g.QuitGroup)            // 退出群组
+		groupRouterGroup.POST("/:id/invitations", g.InviteUserToGroup)          // 邀请进群
+		groupRouterGroup.DELETE("/:id/members/:userID/kick", g.KickGroupMember) // 踢人
+		groupRouterGroup.DELETE("/:id", g.DismissGroup)                         // 解散群组
+		groupRouterGroup.POST("/:id", g.SetGroupInfo)                           // 设置群信息
+		groupRouterGroup.POST("/:id/members/:userID", g.SetGroupMemberInfo)     // 设置群成员信息
 	}
 
 	// Message
@@ -78,5 +90,7 @@ func NewGinRouter() *gin.Engine {
 		// msgGroup.GET("/get_sorted_conversation_list", m.GetSortedConversationList) // 获取会话列表
 	}
 
+	// Swagger
+	r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	return r
 }
