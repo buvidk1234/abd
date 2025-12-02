@@ -20,15 +20,15 @@ func NewMessageService(db *gorm.DB) *MessageService {
 }
 
 type SendMessageReq struct {
-	SenderID    string `json:"sender_id" binding:"required"`
-	SessionType int32  `json:"session_type" binding:"required"`
-	ReceiverID  string `json:"receiver_id" binding:"required"`
-	ContentType int32  `json:"content_type" binding:"required"`
-	Content     string `json:"content" binding:"required"`
+	SenderID string `json:"sender_id" binding:"required"`
+	ConvType int32  `json:"conv_type" binding:"required"`
+	TargetID string `json:"target_id" binding:"required"`
+	MsgType  int32  `json:"msg_type" binding:"required"`
+	Content  string `json:"content" binding:"required"`
 }
 
 func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) error {
-	conversationID := s.getConversationID(req.SessionType, req.SenderID, req.ReceiverID)
+	conversationID := s.getConversationID(req.ConvType, req.SenderID, req.TargetID)
 
 	// TODO: 创建好友时或加入群聊时调用，初始化会话记录
 	s.InitConversationForUser(ctx, req)
@@ -37,22 +37,22 @@ func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) er
 	// perform read->increment->update and message create in a single transaction
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// lock the seq row to avoid concurrent increments
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("conversation_id = ?", conversationID).First(&seqConversation).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", conversationID).First(&seqConversation).Error; err != nil {
 			return err
 		}
 
 		seqConversation.MaxSeq = seqConversation.MaxSeq + 1
 
-		if err := tx.Model(&model.SeqConversation{}).Where("conversation_id = ?", conversationID).Update("max_seq", seqConversation.MaxSeq).Error; err != nil {
+		if err := tx.Model(&model.SeqConversation{}).Where("id = ?", conversationID).Update("max_seq", seqConversation.MaxSeq).Error; err != nil {
 			return err
 		}
 
 		msg := model.Message{
 			ConversationID: conversationID,
-			SenderID:       req.SenderID,
-			ContentType:    int32(req.ContentType),
-			Content:        req.Content,
 			Seq:            seqConversation.MaxSeq,
+			SenderID:       req.SenderID,
+			MsgType:        req.MsgType,
+			Content:        req.Content,
 		}
 
 		if err := tx.Create(&msg).Error; err != nil {
@@ -70,93 +70,98 @@ func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) er
 		return err
 	}
 
+	// 更新timeline
+	switch req.ConvType {
+	case constant.SingleChatType:
+		// 更新双方会话的 max_seq
+		var seqUser model.SeqUser
+		err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+			seqUser = model.SeqUser{
+				ID:     req.TargetID,
+				MaxSeq: 0,
+			}
+			tx.FirstOrCreate(&seqUser, "id = ?", req.TargetID)
+
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", req.TargetID).First(&seqUser).Error; err != nil {
+				return err
+			}
+
+			seqUser.MaxSeq = seqUser.MaxSeq + 1
+			if err := tx.Model(&model.SeqUser{}).Where("id = ?", req.TargetID).Update("max_seq", seqUser.MaxSeq).Error; err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		userTimeline := model.UserTimeline{
+			OwnerID:        req.TargetID,
+			Seq:            seqUser.MaxSeq,
+			ConversationID: conversationID,
+			MsgID:          0, // TODO: 关联消息ID
+			RefMsgSeq:      seqConversation.MaxSeq,
+			MsgType:        req.MsgType,
+			SenderID:       req.SenderID,
+			Snapshot:       req.Content, // TODO: 生成摘要
+		}
+		if err := s.db.WithContext(ctx).Create(&userTimeline).Error; err != nil {
+			return err
+		}
+	case constant.GroupChatType:
+		// TODO: 群组消息更新群成员的timeline
+	default:
+		return errors.New("invalid session type")
+	}
 	return nil
 }
 
-type PullMsgResp struct {
+type PullSpecifiedConvReq struct {
+	UserID  string `json:"user_id" binding:"required"`
+	ConvID  string `json:"conv_id" binding:"required"`
+	ConvSeq int32  `json:"conv_seq,string"`
+}
+type PullSpecifiedConvResp struct {
 	Messages []model.Message `json:"messages"`
-	ReadSeq  int64           `json:"read_seq,string"`
-	MaxSeq   int64           `json:"max_seq,string"`
 }
 
-func (s *MessageService) PullSpecifiedMsg(ctx context.Context, userAID string, sesstionType int32, oppositeID string) (PullMsgResp, error) {
-	conversationID := s.getConversationID(sesstionType, userAID, oppositeID)
-	var maxSeq int64
-	s.db.WithContext(ctx).Model(&model.SeqConversation{}).Where("conversation_id = ?", conversationID).Select("max_seq").Scan(&maxSeq)
-	var imaxSeq int64
-	s.db.WithContext(ctx).Model(&model.Conversation{}).Where("conversation_id = ? AND user_id = ?", conversationID, userAID).Select("read_seq").Scan(&imaxSeq)
-	if imaxSeq >= maxSeq {
-		return PullMsgResp{
-			Messages: []model.Message{},
-			ReadSeq:  imaxSeq,
-			MaxSeq:   maxSeq,
-		}, nil
+func (s *MessageService) PullSpecifiedConv(ctx context.Context, req PullSpecifiedConvReq) (PullSpecifiedConvResp, error) {
+
+	var msgs []model.Message
+	if err := s.db.WithContext(ctx).Find(&msgs, "conversation_id = ? AND seq >= ? ORDER BY seq ASC", req.ConvID, req.ConvSeq).Error; err != nil {
+		return PullSpecifiedConvResp{}, err
 	}
-	var messages []model.Message
-	s.db.WithContext(ctx).Find(&messages, "conversation_id = ? and seq > ? and seq <= ?", conversationID, imaxSeq, maxSeq).Order("seq ASC")
-	return PullMsgResp{
-		Messages: messages,
-		ReadSeq:  imaxSeq,
-		MaxSeq:   maxSeq,
-	}, nil
+	return PullSpecifiedConvResp{Messages: msgs}, nil
 }
 
-type PullAllMsgResp struct {
-	PullMsgs map[string]PullMsgResp `json:"pull_msgs"`
+type PullConvListReq struct {
+	UserID  string `json:"user_id" binding:"required"`
+	UserSeq int64  `json:"user_seq,string"`
+}
+type PullConvListResp struct {
+	PullMsgs map[string][]model.Message `json:"pull_msgs"`
 }
 
-func (s *MessageService) PullAllMsg(ctx context.Context, userID string) (PullAllMsgResp, error) {
-	var conversations []model.Conversation
-	s.db.WithContext(ctx).Find(&conversations, "user_id = ?", userID)
-	var conversationIDs []string
-	for _, conv := range conversations {
-		conversationIDs = append(conversationIDs, conv.ConversationID)
+func (s *MessageService) PullConvList(ctx context.Context, req PullConvListReq) (PullConvListResp, error) {
+	var userTimelines []model.UserTimeline
+	if err := s.db.WithContext(ctx).Find(&userTimelines, "owner_id = ? AND seq >= ? ORDER BY seq ASC", req.UserID, req.UserSeq).Error; err != nil {
+		return PullConvListResp{}, err
 	}
-	var seqConversations []model.SeqConversation
-	s.db.WithContext(ctx).Find(&seqConversations, "conversation_id IN ?", conversationIDs)
-	seqMap := make(map[string]int64)
-	for _, seqConv := range seqConversations {
-		seqMap[seqConv.ConversationID] = seqConv.MaxSeq
-	}
-
-	pullMsgs := make(map[string]PullMsgResp)
-	for _, conv := range conversations {
-		maxSeq := seqMap[conv.ConversationID]
-		if conv.ReadSeq < maxSeq {
-			var messages []model.Message
-			s.db.WithContext(ctx).Find(&messages, "conversation_id = ? and seq > ? and seq <= ?", conv.ConversationID, conv.ReadSeq, maxSeq).Order("seq ASC")
-			pullMsgs[conv.ConversationID] = PullMsgResp{
-				Messages: messages,
-				ReadSeq:  conv.ReadSeq,
-				MaxSeq:   maxSeq,
-			}
+	pullMsgs := make(map[string][]model.Message)
+	for _, timeline := range userTimelines {
+		msgAbstract := model.Message{
+			ConversationID: timeline.ConversationID,
+			ID:             timeline.MsgID,
+			Seq:            timeline.RefMsgSeq,
+			MsgType:        timeline.MsgType,
+			SenderID:       timeline.SenderID,
+			Content:        timeline.Snapshot,
 		}
+		pullMsgs[timeline.ConversationID] = append(pullMsgs[timeline.ConversationID], msgAbstract)
 	}
-
-	// Convert pullMsgs map to a sorted array based on the last message's sequence number
-	// var sortedPullMsgs []PullMsgResp
-	// for _, pullMsg := range pullMsgs {
-	// 	sortedPullMsgs = append(sortedPullMsgs, pullMsg)
-	// }
-	// sort.Slice(sortedPullMsgs, func(i, j int) bool {
-	// 	return sortedPullMsgs[i].MaxSeq < sortedPullMsgs[j].MaxSeq
-	// })
-
-	return PullAllMsgResp{PullMsgs: pullMsgs}, nil
-}
-
-type MarkMsgsAsReadReq struct {
-	UserID      string `json:"user_id" binding:"required"`
-	SessionType int32  `json:"session_type,string" binding:"required"`
-	OppositeID  string `json:"opposite_id" binding:"required"`
-	ReadSeq     int64  `json:"read_seq,string" binding:"required"`
-}
-
-func (s *MessageService) MarkMsgsAsRead(ctx context.Context, req MarkMsgsAsReadReq) error {
-	conversationID := s.getConversationID(req.SessionType, req.UserID, req.OppositeID)
-	return s.db.WithContext(ctx).Model(&model.Conversation{}).
-		Where("conversation_id = ? AND user_id = ?", conversationID, req.UserID).
-		Update("read_seq", req.ReadSeq).Error
+	return PullConvListResp{PullMsgs: pullMsgs}, nil
 }
 
 func (s *MessageService) DeleteConversation(ctx context.Context, userID string, conversationID string) error {
@@ -184,14 +189,14 @@ func (s *MessageService) DeleteConversation(ctx context.Context, userID string, 
 
 // TODO: 成为好友，或加入群组时调用，初始化会话记录
 func (s *MessageService) InitConversationForUser(ctx context.Context, req SendMessageReq) error {
-	conversationID := s.getConversationID(req.SessionType, req.SenderID, req.ReceiverID)
+	conversationID := s.getConversationID(req.ConvType, req.SenderID, req.TargetID)
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		switch req.SessionType {
+		switch req.ConvType {
 		case constant.SingleChatType:
 			// 确保双方都有会话记录
 			conversations := []model.Conversation{
-				{UserID: req.SenderID, ConversationID: conversationID},
-				{UserID: req.ReceiverID, ConversationID: conversationID},
+				{OwnerID: req.SenderID, ConversationID: conversationID},
+				{OwnerID: req.TargetID, ConversationID: conversationID},
 			}
 			for _, conversation := range conversations {
 				if err := tx.FirstOrCreate(&conversation).Error; err != nil {
@@ -199,24 +204,23 @@ func (s *MessageService) InitConversationForUser(ctx context.Context, req SendMe
 				}
 			}
 			seqConversation := model.SeqConversation{
-				ConversationID: conversationID,
-				MinSeq:         0,
-				MaxSeq:         0,
+				ID:     conversationID,
+				MaxSeq: 0,
 			}
-			if err := tx.FirstOrCreate(&seqConversation, "conversation_id = ?", conversationID).Error; err != nil {
+			if err := tx.FirstOrCreate(&seqConversation, "id = ?", conversationID).Error; err != nil {
 				return err
 			}
 		case constant.GroupChatType:
 			// 确保群组会话记录存在
 			var seqConversation model.SeqConversation
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("conversation_id = ?", conversationID).First(&seqConversation).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", conversationID).First(&seqConversation).Error; err != nil {
 				return err
 			}
 			conversation := model.Conversation{
-				UserID:         req.SenderID,
+				OwnerID:        req.SenderID,
 				ConversationID: conversationID,
 				MinSeq:         seqConversation.MaxSeq,
-				MaxSeq:         seqConversation.MaxSeq,
+				SyncSeq:        seqConversation.MaxSeq,
 			}
 			if err := tx.FirstOrCreate(&conversation).Error; err != nil {
 				return err
@@ -233,9 +237,8 @@ func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, gro
 	conversationID := s.getConversationID(constant.GroupChatType, "", groupID)
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		seqConversation := model.SeqConversation{
-			ConversationID: conversationID,
-			MinSeq:         0,
-			MaxSeq:         0,
+			ID:     conversationID,
+			MaxSeq: 0,
 		}
 		if err := tx.FirstOrCreate(&seqConversation, "conversation_id = ?", conversationID).Error; err != nil {
 			return err
@@ -244,7 +247,7 @@ func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, gro
 		var conversations []model.Conversation
 		for _, memberID := range memberIDs {
 			conversations = append(conversations, model.Conversation{
-				UserID:         memberID,
+				OwnerID:        memberID,
 				ConversationID: conversationID,
 			})
 		}
@@ -259,8 +262,8 @@ func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, gro
 
 // ===================== Helper Functions =====================
 
-func (s *MessageService) getConversationID(sessionType int32, userID string, receiverID string) string {
-	switch sessionType {
+func (s *MessageService) getConversationID(ConvType int32, userID string, receiverID string) string {
+	switch ConvType {
 	case constant.SingleChatType:
 		v1, _ := strconv.ParseInt(userID, 10, 64)
 		v2, _ := strconv.ParseInt(receiverID, 10, 64)

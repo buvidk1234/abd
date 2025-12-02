@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	swaggerFiles "github.com/swaggo/files"
-	"github.com/swaggo/gin-swagger"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -78,16 +78,13 @@ func NewGinRouter() *gin.Engine {
 	m := NewMessageApi(service.NewMessageService(database.GetDB()))
 	{
 		msgGroup := r.Group("/msg")
-		msgGroup.POST("/send_msg", m.SendMessage)                     // 发送消息
-		msgGroup.GET("/pull_specified_msg", m.PullSpecifiedMsg)       // 拉取某个会话的消息
-		msgGroup.GET("/pull_all_msg", m.PullAllMsg)                   // 拉取所有会话的所有消息
-		msgGroup.PATCH("/mark_msgs_as_read", m.MarkMsgsAsRead)        // 标记消息为已读
-		msgGroup.DELETE("/delete_conversation", m.DeleteConversation) // 删除会话
+		msgGroup.POST("/send_msg", m.SendMessage)                  // 发送消息
+		msgGroup.POST("/pull_specified_conv", m.PullSpecifiedConv) // 拉取某个会话的消息
+		msgGroup.POST("/pull_conv_list", m.PullConvList)           // 拉取会话列表
+		// msgGroup.DELETE("/delete_conversation", m.DeleteConversation) // 删除会话
 		// msgGroup.POST("/revoke_msg", m.RevokeMsg)             // 撤回消息
 		// msgGroup.POST("/delete_msgs", m.DeleteMsgs)           // 删除消息
 		// msgGroup.POST("/newest_seq", m.GetSeq)                // 获取最新消息序列号
-
-		// msgGroup.GET("/get_sorted_conversation_list", m.GetSortedConversationList) // 获取会话列表
 	}
 
 	// Swagger

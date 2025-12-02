@@ -19,6 +19,8 @@ func main() {
 	db.AutoMigrate(&model.Message{})
 	db.AutoMigrate(&model.Conversation{})
 	db.AutoMigrate(&model.SeqConversation{})
+	db.AutoMigrate(&model.SeqUser{})
+	db.AutoMigrate(&model.UserTimeline{})
 
 	r := api.NewGinRouter()
 

@@ -2,9 +2,7 @@ package api
 
 import (
 	"backend/internal/api/apiresp"
-	"backend/internal/api/apiresp/errs"
 	"backend/internal/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,16 +29,13 @@ func (a *MessageApi) SendMessage(c *gin.Context) {
 	apiresp.GinSuccess(c, nil)
 }
 
-func (a *MessageApi) PullSpecifiedMsg(c *gin.Context) {
-	userAID, _ := c.Get("my_user_id")
-	sessionTypeStr := c.Query("session_type")
-	oppositeID := c.Query("opposite_id")
-	sessionType, err := strconv.ParseInt(sessionTypeStr, 10, 32)
-	if err != nil {
+func (a *MessageApi) PullSpecifiedConv(c *gin.Context) {
+	var req service.PullSpecifiedConvReq
+	if err := c.ShouldBindJSON(&req); err != nil {
 		apiresp.GinError(c, err)
 		return
 	}
-	resp, err := a.s.PullSpecifiedMsg(c.Request.Context(), userAID.(string), int32(sessionType), oppositeID)
+	resp, err := a.s.PullSpecifiedConv(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -48,27 +43,13 @@ func (a *MessageApi) PullSpecifiedMsg(c *gin.Context) {
 	apiresp.GinSuccess(c, resp)
 }
 
-func (a *MessageApi) MarkMsgsAsRead(c *gin.Context) {
-	var req service.MarkMsgsAsReadReq
+func (a *MessageApi) PullConvList(c *gin.Context) {
+	var req service.PullConvListReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apiresp.GinError(c, err)
 		return
 	}
-	err := a.s.MarkMsgsAsRead(c.Request.Context(), req)
-	if err != nil {
-		apiresp.GinError(c, err)
-		return
-	}
-	apiresp.GinSuccess(c, nil)
-}
-
-func (a *MessageApi) PullAllMsg(c *gin.Context) {
-	userID, exists := c.Get("my_user_id")
-	if !exists {
-		apiresp.GinError(c, errs.ErrUnauthorized)
-		return
-	}
-	resp, err := a.s.PullAllMsg(c.Request.Context(), userID.(string))
+	resp, err := a.s.PullConvList(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
