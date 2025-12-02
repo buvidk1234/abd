@@ -4,10 +4,13 @@ import (
 	"backend/internal/api"
 	"backend/internal/model"
 	"backend/internal/pkg/database"
+	"backend/internal/pkg/snowflake"
 )
 
 func main() {
 	database.Init()
+	snowflake.Init(1)
+
 	db := database.GetDB()
 	db.AutoMigrate(&model.User{})
 	db.AutoMigrate(&model.Friend{})
