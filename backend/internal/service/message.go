@@ -3,8 +3,10 @@ package service
 import (
 	"backend/internal/model"
 	"backend/internal/pkg/constant"
+	"backend/internal/pkg/snowflake"
 	"context"
 	"errors"
+	"log"
 	"strconv"
 
 	"gorm.io/gorm"
@@ -33,23 +35,27 @@ func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) er
 	// TODO: 创建好友时或加入群聊时调用，初始化会话记录
 	s.InitConversationForUser(ctx, req)
 
-	var seqConversation model.SeqConversation
+	var newSeq int64
+	var msg model.Message
 	// perform read->increment->update and message create in a single transaction
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		var seqConversation model.SeqConversation
 		// lock the seq row to avoid concurrent increments
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", conversationID).First(&seqConversation).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", conversationID).FirstOrCreate(&seqConversation).Error; err != nil {
 			return err
 		}
 
-		seqConversation.MaxSeq = seqConversation.MaxSeq + 1
+		newSeq = seqConversation.MaxSeq + 1
 
-		if err := tx.Model(&model.SeqConversation{}).Where("id = ?", conversationID).Update("max_seq", seqConversation.MaxSeq).Error; err != nil {
+		if err := tx.Model(&model.SeqConversation{}).Where("id = ?", conversationID).Update("max_seq", newSeq).Error; err != nil {
 			return err
 		}
 
-		msg := model.Message{
+		msg = model.Message{
+			ID:             snowflake.GenID(),
 			ConversationID: conversationID,
-			Seq:            seqConversation.MaxSeq,
+			Seq:            newSeq,
 			SenderID:       req.SenderID,
 			MsgType:        req.MsgType,
 			Content:        req.Content,
@@ -60,61 +66,65 @@ func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) er
 		}
 
 		return nil
-	})
-
-	// if transaction returned record not found, normalize error for caller if needed
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
+	}); err != nil {
 		return err
 	}
 
-	// 更新timeline
-	switch req.ConvType {
-	case constant.SingleChatType:
-		// 更新双方会话的 max_seq
-		var seqUser model.SeqUser
-		err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	// async update user timeline
+	go func() {
+		switch req.ConvType {
+		case constant.SingleChatType:
+			err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+				var seqUser model.SeqUser
 
-			seqUser = model.SeqUser{
-				ID:     req.TargetID,
-				MaxSeq: 0,
+				// FOR UPDATE + FirstOrCreate 合并写法
+				if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+					FirstOrCreate(&seqUser, "id = ?", req.TargetID).Error; err != nil {
+					return err
+				}
+
+				newSeqUser := seqUser.MaxSeq + 1
+
+				if err := tx.Model(&model.SeqUser{}).Where("id = ?", req.TargetID).Update("max_seq", newSeqUser).Error; err != nil {
+					return err
+				}
+
+				userTimeline := model.UserTimeline{
+					OwnerID:        req.TargetID,
+					Seq:            newSeqUser,
+					ConversationID: conversationID,
+					MsgID:          msg.ID,
+					RefMsgSeq:      newSeq,
+					MsgType:        req.MsgType,
+					SenderID:       req.SenderID,
+					Snapshot:       req.Content, // TODO：生成消息摘要
+				}
+
+				if err := tx.Create(&userTimeline).Error; err != nil {
+					return err
+				}
+
+				return nil
+			})
+
+			// goroutine 中错误无法返回，需要 channel 或 log
+			if err != nil {
+				log.Printf("[timeline error] %v", err)
 			}
-			tx.FirstOrCreate(&seqUser, "id = ?", req.TargetID)
-
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", req.TargetID).First(&seqUser).Error; err != nil {
-				return err
-			}
-
-			seqUser.MaxSeq = seqUser.MaxSeq + 1
-			if err := tx.Model(&model.SeqUser{}).Where("id = ?", req.TargetID).Update("max_seq", seqUser.MaxSeq).Error; err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return err
+		case constant.GroupChatType:
+			/*
+				用 Redis 批量生成 1000 个 Seq。
+				在内存里构建 1000 个 UserTimeline 对象。
+				只开 1 个事务。
+				执行一次 tx.CreateInBatches(timelines, 100)
+			*/
+			log.Printf("[timeline] group message timeline update not implemented")
+		default:
+			log.Printf("err conv type")
+			return
 		}
+	}()
 
-		userTimeline := model.UserTimeline{
-			OwnerID:        req.TargetID,
-			Seq:            seqUser.MaxSeq,
-			ConversationID: conversationID,
-			MsgID:          0, // TODO: 关联消息ID
-			RefMsgSeq:      seqConversation.MaxSeq,
-			MsgType:        req.MsgType,
-			SenderID:       req.SenderID,
-			Snapshot:       req.Content, // TODO: 生成摘要
-		}
-		if err := s.db.WithContext(ctx).Create(&userTimeline).Error; err != nil {
-			return err
-		}
-	case constant.GroupChatType:
-		// TODO: 群组消息更新群成员的timeline
-	default:
-		return errors.New("invalid session type")
-	}
 	return nil
 }
 
