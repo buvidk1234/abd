@@ -21,10 +21,12 @@ func (f *FriendApi) ApplyToAddFriend(c *gin.Context) {
 	var req service.ApplyToAddFriendReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
 	}
 	err := f.friendService.ApplyToAddFriend(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
+		return
 	}
 	apiresp.GinSuccess(c, nil)
 }
@@ -34,10 +36,12 @@ func (f *FriendApi) RespondFriendApply(c *gin.Context) {
 	var req service.RespondFriendApplyReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
 	}
 	err := f.friendService.RespondFriendApply(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
+		return
 	}
 	apiresp.GinSuccess(c, nil)
 }
@@ -45,11 +49,11 @@ func (f *FriendApi) RespondFriendApply(c *gin.Context) {
 // 获取好友列表
 func (f *FriendApi) GetFriendList(c *gin.Context) {
 	var req service.GetPaginationFriendsReq
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindQuery(&req); err != nil {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	resp, err := f.friendService.GetPaginationFriends(c.Request.Context(), req)
+	resp, err := f.friendService.GetPaginationFriends(c.Request.Context(), req, c.GetString("my_user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -59,9 +63,8 @@ func (f *FriendApi) GetFriendList(c *gin.Context) {
 
 // 获取指定好友信息
 func (f *FriendApi) GetSpecifiedFriendsInfo(c *gin.Context) {
-	ownerUserID := c.PostForm("ownerUserID")
-	friendUserID := c.PostForm("friendUserID")
-	friendInfo, err := f.friendService.GetSpecifiedFriendInfo(c.Request.Context(), ownerUserID, friendUserID)
+	friendUserID := c.Param("friendId")
+	friendInfo, err := f.friendService.GetSpecifiedFriendInfo(c.Request.Context(), c.GetString("my_user_id"), friendUserID)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -71,12 +74,8 @@ func (f *FriendApi) GetSpecifiedFriendsInfo(c *gin.Context) {
 
 // 删除好友
 func (f *FriendApi) DeleteFriend(c *gin.Context) {
-	var req service.DeleteFriendReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.GinError(c, errs.ErrInvalidParam)
-		return
-	}
-	err := f.friendService.DeleteFriend(c.Request.Context(), req)
+	friendUserID := c.Param("friendId")
+	err := f.friendService.DeleteFriend(c.Request.Context(), c.GetString("my_user_id"), friendUserID)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -116,15 +115,47 @@ func (f *FriendApi) GetSelfApplyList(c *gin.Context) {
 
 // 添加黑名单
 func (f *FriendApi) AddBlack(c *gin.Context) {
-
+	var req service.AddBlackReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	req.OwnerUserID = c.GetString("my_user_id")
+	req.OperatorUserID = req.OwnerUserID
+	if err := f.friendService.AddBlack(c.Request.Context(), req); err != nil {
+		apiresp.GinError(c, err)
+		return
+	}
+	apiresp.GinSuccess(c, nil)
 }
 
 // 移除黑名单
 func (f *FriendApi) RemoveBlack(c *gin.Context) {
-
+	var req service.RemoveBlackReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	req.OwnerUserID = c.GetString("my_user_id")
+	if err := f.friendService.RemoveBlack(c.Request.Context(), req); err != nil {
+		apiresp.GinError(c, err)
+		return
+	}
+	apiresp.GinSuccess(c, nil)
 }
 
 // 获取黑名单列表
 func (f *FriendApi) GetPaginationBlacks(c *gin.Context) {
-
+	var req service.GetPaginationBlacksReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	req.OwnerUserID = c.GetString("my_user_id")
+	resp, err := f.friendService.GetPaginationBlacks(c.Request.Context(), req)
+	if err != nil {
+		apiresp.GinError(c, err)
+		return
+	}
+	apiresp.GinSuccess(c, resp)
 }

@@ -25,7 +25,7 @@ type CreateGroupReq struct {
 	GroupName         string `json:"groupName" binding:"required"`
 	AvatarURL         string `json:"avatarURL" binding:"required"`
 	Ex                string `json:"ex"`
-	CreatorUserID     string `json:"creatorUserID" binding:"required"`
+	CreatorUserID     string `json:"creatorUserID"`
 	GroupType         int32  `json:"groupType" default:"1"`
 	NeedVerification  int32  `json:"needVerification" default:"1"`
 	LookMemberInfo    int32  `json:"lookMemberInfo" default:"1"`
@@ -33,39 +33,39 @@ type CreateGroupReq struct {
 }
 
 type JoinGroupReq struct {
-	GroupID       string `json:"groupID" binding:"required"`
-	UserID        string `json:"userID" binding:"required"`
+	GroupID       string `json:"groupID"`
+	UserID        string `json:"userID"`
 	ReqMsg        string `json:"reqMsg"`
 	JoinSource    int32  `json:"joinSource"`
 	InviterUserID string `json:"inviterUserID"`
 }
 
 type QuitGroupReq struct {
-	GroupID        string `json:"groupID" binding:"required"`
-	UserID         string `json:"userID" binding:"required"`
-	OperatorUserID string `json:"operatorUserID" binding:"required"`
+	GroupID        string `json:"groupID"`
+	UserID         string `json:"userID"`
+	OperatorUserID string `json:"operatorUserID"`
 }
 
 type InviteUserToGroupReq struct {
-	GroupID       string `json:"groupID" binding:"required"`
-	InviterUserID string `json:"inviterUserID" binding:"required"`
+	GroupID       string `json:"groupID"`
+	InviterUserID string `json:"inviterUserID"`
 	InviteeUserID string `json:"inviteeUserID" binding:"required"`
 }
 
 type KickGroupMemberReq struct {
-	GroupID        string `json:"groupID" binding:"required"`
-	OperatorUserID string `json:"operatorUserID" binding:"required"`
-	TargetUserID   string `json:"targetUserID" binding:"required"`
+	GroupID        string `json:"groupID"`
+	OperatorUserID string `json:"operatorUserID"`
+	TargetUserID   string `json:"targetUserID"`
 }
 
 type DismissGroupReq struct {
-	GroupID        string `json:"groupID" binding:"required"`
-	OperatorUserID string `json:"operatorUserID" binding:"required"`
+	GroupID        string `json:"groupID"`
+	OperatorUserID string `json:"operatorUserID"`
 }
 
 type SetGroupInfoReq struct {
-	GroupID           string  `json:"groupID" binding:"required"`
-	OperatorUserID    string  `json:"operatorUserID" binding:"required"`
+	GroupID           string  `json:"groupID"`
+	OperatorUserID    string  `json:"operatorUserID"`
 	GroupName         *string `json:"groupName"`
 	AvatarURL         *string `json:"avatarURL"`
 	Notification      *string `json:"notification"`
@@ -76,9 +76,9 @@ type SetGroupInfoReq struct {
 }
 
 type SetGroupMemberInfoReq struct {
-	GroupID        string  `json:"groupID" binding:"required"`
-	UserID         string  `json:"userID" binding:"required"`
-	OperatorUserID string  `json:"operatorUserID" binding:"required"`
+	GroupID        string  `json:"groupID"`
+	UserID         string  `json:"userID"`
+	OperatorUserID string  `json:"operatorUserID"`
 	Nickname       *string `json:"nickname"`
 	AvatarURL      *string `json:"avatarURL"`
 	RoleLevel      *int32  `json:"roleLevel"`

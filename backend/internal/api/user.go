@@ -5,6 +5,7 @@ import (
 	"backend/internal/api/apiresp/errs"
 	"backend/internal/service"
 	"backend/pkg/util"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,7 +30,7 @@ func (a *UserApi) UserRegister(c *gin.Context) {
 		apiresp.GinError(c, err)
 		return
 	}
-	apiresp.GinSuccess(c, userID)
+	apiresp.GinSuccess(c, strconv.FormatInt(userID, 10))
 }
 
 // UpdateUserInfo 更新用户信息
@@ -39,7 +40,7 @@ func (a *UserApi) UpdateUserInfo(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	err := a.userService.UpdateUserInfo(c.Request.Context(), req)
+	err := a.userService.UpdateUserInfo(c.Request.Context(), req, c.GetString("my_user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -48,17 +49,12 @@ func (a *UserApi) UpdateUserInfo(c *gin.Context) {
 }
 
 func (a *UserApi) GetUsersPublicInfo(c *gin.Context) {
-	var req service.GetUsersPublicInfoReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.GinError(c, errs.ErrInvalidParam)
-		return
-	}
-	userInfos, err := a.userService.GetUsersPublicInfo(c.Request.Context(), req)
+	userInfo, err := a.userService.GetUsersPublicInfo(c.Request.Context(), c.GetString("my_user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
 	}
-	apiresp.GinSuccess(c, userInfos)
+	apiresp.GinSuccess(c, userInfo)
 }
 
 func (a *UserApi) UserLogin(c *gin.Context) {
@@ -77,12 +73,6 @@ func (a *UserApi) UserLogin(c *gin.Context) {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 放行登录路径
-		if c.Request.URL.Path == "/user/user_login" {
-			c.Next() // 直接跳过中间件逻辑
-			return
-		}
-
 		// 获取 Authorization Header
 		token := c.GetHeader("Authorization")
 		if token == "" {

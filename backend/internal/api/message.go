@@ -2,6 +2,7 @@ package api
 
 import (
 	"backend/internal/api/apiresp"
+	"backend/internal/api/apiresp/errs"
 	"backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -18,9 +19,10 @@ func NewMessageApi(s *service.MessageService) *MessageApi {
 func (a *MessageApi) SendMessage(c *gin.Context) {
 	var req service.SendMessageReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.GinError(c, err)
+		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
+	req.SenderID = c.GetString("my_user_id")
 	err := a.s.SendMessage(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -31,10 +33,11 @@ func (a *MessageApi) SendMessage(c *gin.Context) {
 
 func (a *MessageApi) PullSpecifiedConv(c *gin.Context) {
 	var req service.PullSpecifiedConvReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.GinError(c, err)
+	if err := c.ShouldBindQuery(&req); err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
+	req.UserID = c.GetString("my_user_id")
 	resp, err := a.s.PullSpecifiedConv(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -45,10 +48,11 @@ func (a *MessageApi) PullSpecifiedConv(c *gin.Context) {
 
 func (a *MessageApi) PullConvList(c *gin.Context) {
 	var req service.PullConvListReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.GinError(c, err)
+	if err := c.ShouldBindQuery(&req); err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
+	req.UserID = c.GetString("my_user_id")
 	resp, err := a.s.PullConvList(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -58,9 +62,9 @@ func (a *MessageApi) PullConvList(c *gin.Context) {
 }
 
 func (a *MessageApi) DeleteConversation(c *gin.Context) {
-	userID, _ := c.Get("my_user_id")
+	userID := c.GetString("my_user_id")
 	conversationID := c.Param("conversation_id")
-	err := a.s.DeleteConversation(c.Request.Context(), userID.(string), conversationID)
+	err := a.s.DeleteConversation(c.Request.Context(), userID, conversationID)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return

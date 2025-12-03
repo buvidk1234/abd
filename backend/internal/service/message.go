@@ -22,7 +22,7 @@ func NewMessageService(db *gorm.DB) *MessageService {
 }
 
 type SendMessageReq struct {
-	SenderID string `json:"sender_id" binding:"required"`
+	SenderID string `json:"sender_id"`
 	ConvType int32  `json:"conv_type" binding:"required"`
 	TargetID string `json:"target_id" binding:"required"`
 	MsgType  int32  `json:"msg_type" binding:"required"`
@@ -129,8 +129,8 @@ func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) er
 }
 
 type PullSpecifiedConvReq struct {
-	UserID  string `json:"user_id" binding:"required"`
-	ConvID  string `json:"conv_id" binding:"required"`
+	UserID  string `json:"user_id"`
+	ConvID  string `json:"conv_id"`
 	ConvSeq int32  `json:"conv_seq,string"`
 }
 type PullSpecifiedConvResp struct {
@@ -147,7 +147,7 @@ func (s *MessageService) PullSpecifiedConv(ctx context.Context, req PullSpecifie
 }
 
 type PullConvListReq struct {
-	UserID  string `json:"user_id" binding:"required"`
+	UserID  string `json:"user_id"`
 	UserSeq int64  `json:"user_seq,string"`
 }
 type PullConvListResp struct {

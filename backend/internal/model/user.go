@@ -22,7 +22,7 @@ func init() {
 
 type User struct {
 	// 基本信息
-	UserID       string `gorm:"column:user_id;primaryKey;type:varchar(64)" json:"userID"`
+	UserID       int64  `gorm:"column:user_id;primaryKey;autoIncrement" json:"userID"`
 	Username     string `gorm:"column:username;type:varchar(32);uniqueIndex;not null;comment:用户名" json:"username"`
 	PasswordHash string `gorm:"column:password;type:varchar(255);not null;comment:加密后的密码" json:"-"`
 	Phone        string `gorm:"column:phone;type:varchar(20);uniqueIndex;default:null;comment:手机号" json:"phone,omitempty"`
@@ -30,7 +30,7 @@ type User struct {
 	// 个人资料
 	Nickname  string    `gorm:"column:nickname;type:varchar(64);default:'';comment:昵称" json:"nickname"`
 	AvatarURL string    `gorm:"column:face_url;type:varchar(255);default:'';comment:头像链接" json:"faceURL"`
-	Gender    int32     `gorm:"column:gender;type:tinyint;default:0;comment:性别" json:"gender"`
+	Gender    int32     `gorm:"column:gender;type:tinyint;default:0;comment:性别，0：不愿透露，1：男，2：女" json:"gender"`
 	Signature string    `gorm:"column:signature;type:varchar(255);default:'';comment:个性签名" json:"signature"`
 	Birth     time.Time `gorm:"column:birth;type:date;default:null" json:"birth"`
 	// 账号设置
@@ -46,12 +46,12 @@ type User struct {
 
 func (User) TableName() string { return "users" }
 
-func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
-	if u.UserID == "" {
-		u.UserID = node.Generate().String()
+/*func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
+	if u.UserID == 0 {
+		u.UserID = node.Generate().Int64()
 	}
 	return
-}
+}*/
 
 type UserEx struct {
 	City     string `json:"city"`

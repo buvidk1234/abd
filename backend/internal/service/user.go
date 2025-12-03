@@ -6,6 +6,7 @@ import (
 	"backend/internal/model"
 	"backend/pkg/util"
 	"context"
+	"strconv"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -27,17 +28,17 @@ type UserRegisterReq struct {
 	Phone     string `json:"phone"`
 	Email     string `json:"email"`
 	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatarURL"`
+	AvatarURL string `json:"avatar_url"`
 }
 
-func (u *UserService) UserRegister(ctx context.Context, req UserRegisterReq) (string, error) {
+func (u *UserService) UserRegister(ctx context.Context, req UserRegisterReq) (int64, error) {
 	// 检查用户名是否已存在
 	var count int64
 	if err := u.db.WithContext(ctx).Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
-		return "", err
+		return 0, err
 	}
 	if count > 0 {
-		return "", errs.ErrUserExists
+		return 0, errs.ErrUserExists
 	}
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	user := model.User{
@@ -49,17 +50,16 @@ func (u *UserService) UserRegister(ctx context.Context, req UserRegisterReq) (st
 		AvatarURL:    req.AvatarURL,
 	}
 	if err := u.db.WithContext(ctx).Create(&user).Error; err != nil {
-		return "", err
+		return 0, err
 	}
 	return user.UserID, nil
 }
 
 // UpdateUserInfoReq 用户信息更新请求
 type UpdateUserInfoReq struct {
-	UserID    string  `json:"userID" binding:"required"`
 	Nickname  string  `json:"nickname"`
-	AvatarURL string  `json:"avatarURL"`
-	Gender    int32   `json:"gender"`
+	AvatarURL string  `json:"avatar_url"`
+	Gender    int32   `json:"gender,string"`
 	Signature string  `json:"signature"`
 	Birth     *string `json:"birth"`
 	Phone     string  `json:"phone"`
@@ -68,9 +68,9 @@ type UpdateUserInfoReq struct {
 }
 
 // UpdateUserInfo
-func (u *UserService) UpdateUserInfo(ctx context.Context, req UpdateUserInfoReq) error {
+func (u *UserService) UpdateUserInfo(ctx context.Context, req UpdateUserInfoReq, userId string) error {
 	var user model.User
-	if err := u.db.WithContext(ctx).First(&user, "user_id = ?", req.UserID).Error; err != nil {
+	if err := u.db.WithContext(ctx).First(&user, "user_id = ?", userId).Error; err != nil {
 		return err
 	}
 
@@ -104,24 +104,12 @@ func (u *UserService) UpdateUserInfo(ctx context.Context, req UpdateUserInfoReq)
 	return u.db.WithContext(ctx).Save(&user).Error
 }
 
-type GetUsersPublicInfoReq struct {
-	UserIDs []string `json:"userIDs"`
-}
-
-func (u *UserService) GetUsersPublicInfo(ctx context.Context, req GetUsersPublicInfoReq) ([]dto.UserInfo, error) {
-	var users []model.User
-	if len(req.UserIDs) == 0 {
-		u.db.WithContext(ctx).Find(&users)
-	} else {
-		if err := u.db.WithContext(ctx).Find(&users, "user_id IN ?", req.UserIDs).Error; err != nil {
-			return nil, err
-		}
+func (u *UserService) GetUsersPublicInfo(ctx context.Context, userId string) (dto.UserInfo, error) {
+	var user = model.User{}
+	if err := u.db.WithContext(ctx).First(&user, "user_id is ?", userId).Error; err != nil {
+		return dto.UserInfo{}, err
 	}
-	var userInfos []dto.UserInfo
-	for _, user := range users {
-		userInfos = append(userInfos, dto.ConvertToUserInfo(user))
-	}
-	return userInfos, nil
+	return dto.ConvertToUserInfo(user), nil
 }
 
 type UserLoginReq struct {
@@ -140,7 +128,7 @@ func (u *UserService) UserLogin(ctx context.Context, req UserLoginReq) (string, 
 	if bcrypt.CompareHashAndPassword(byteHashedPassword, bytePassword) != nil {
 		return "", errs.ErrUserPasswordWrong
 	}
-	token, err := util.GenerateToken(user.UserID)
+	token, err := util.GenerateToken(strconv.FormatInt(user.UserID, 10))
 	if err != nil {
 		return "", err
 	}

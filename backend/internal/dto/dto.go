@@ -7,17 +7,14 @@ import (
 
 // UserInfo
 type UserInfo struct {
-	UserID    string `json:"userID"`
+	UserID    int64  `json:"user_id"`
 	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatarURL"`
-	Gender    int32  `json:"gender"`
+	AvatarURL string `json:"avatar_url"`
+	Gender    int32  `json:"gender,string"`
 	Signature string `json:"signature"`
 }
 
 func ConvertToUserInfo(user model.User) UserInfo {
-	if user.UserID == "" {
-		return UserInfo{}
-	}
 	return UserInfo{
 		UserID:    user.UserID,
 		Nickname:  user.Nickname,
@@ -30,7 +27,7 @@ func ConvertToUserInfo(user model.User) UserInfo {
 // Friend
 
 type FriendRequestInfo struct {
-	ID           uint      `json:"id"`
+	ID           int64     `json:"id"`
 	FromUser     UserInfo  `json:"fromUser"`
 	ToUser       UserInfo  `json:"toUser"`
 	HandleResult int32     `json:"handleResult"`
@@ -56,7 +53,7 @@ func ConvertToFriendRequestInfo(fr model.FriendRequest, fromUser model.User, toU
 }
 
 type FriendInfo struct {
-	OwnerUserID string   `json:"ownerUserID"`
+	OwnerUserID int64    `json:"ownerUserID"`
 	Remark      string   `json:"remark"`
 	CreatedAt   int64    `json:"createdAt"`
 	FriendUser  UserInfo `json:"friendUser"`
@@ -72,6 +69,22 @@ func ConvertToFriendInfo(friend model.Friend, user model.User) FriendInfo {
 		FriendUser:  ConvertToUserInfo(user),
 		AddSource:   friend.AddSource,
 		IsPinned:    friend.IsPinned,
+	}
+}
+
+type BlackInfo struct {
+	OwnerUserID int64    `json:"ownerUserID"`
+	BlockUser   UserInfo `json:"blockUser"`
+	AddSource   int32    `json:"addSource"`
+	CreatedAt   int64    `json:"createdAt"`
+}
+
+func ConvertToBlackInfo(black model.Black, user model.User) BlackInfo {
+	return BlackInfo{
+		OwnerUserID: black.OwnerUserID,
+		BlockUser:   ConvertToUserInfo(user),
+		AddSource:   black.AddSource,
+		CreatedAt:   black.CreatedAt.Unix(),
 	}
 }
 
