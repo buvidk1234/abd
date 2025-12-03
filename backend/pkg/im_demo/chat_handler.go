@@ -1,10 +1,8 @@
-package api
+package im_demo
 
 import (
 	"log"
 	"net/http"
-
-	"backend/internal/im"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -38,5 +36,5 @@ func WsHandler(c *gin.Context) {
 
 	// 3. 将连接交给 IM Manager 管理
 	// 这一步之后，ReadPump 和 WritePump 就会自动开始工作
-	im.IMManager.AddClient(userID, conn)
+	IMManager.AddClient(userID, conn)
 }

@@ -1,4 +1,4 @@
-package im
+package im_demo
 
 import (
 	"encoding/json"

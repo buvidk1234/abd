@@ -1,4 +1,4 @@
-package im
+package im_demo
 
 // 消息类型常量
 const (

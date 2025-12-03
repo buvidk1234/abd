@@ -17,7 +17,7 @@ import (
 func NewGinRouter() *gin.Engine {
 	r := gin.Default()
 
-	r.GET("/ws", WsHandler)
+	// r.GET("/ws", WsHandler)
 
 	// swag init -g cmd/server/main.go -d ./ -o ./docs
 	docs.SwaggerInfo.BasePath = "/"
