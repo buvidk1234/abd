@@ -15,7 +15,7 @@ import (
 
 func init() {
 	// Initialize snowflake with a dummy machine ID
-	_ = snowflake.Init(1)
+	_ = snowflake.Init(snowflake.Config{MachineID: 1})
 }
 
 func setupTestDB(t *testing.T) *gorm.DB {
