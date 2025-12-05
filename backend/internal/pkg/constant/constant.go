@@ -22,3 +22,15 @@ const (
 	MsgTypeMemberJoin = 301 // "张三加入群聊"
 	MsgTypeGroupMute  = 302 // "群主开启了全员禁言"
 )
+
+const (
+	// MultiTerminalLogin.
+	DefalutNotKick = 0
+	// Full-end login, but the same end is mutually exclusive.
+	AllLoginButSameTermKick = 1
+	// The PC side is mutually exclusive, and the mobile side is mutually exclusive, but the web side can be online at
+	// the same time.
+	AllLoginButSameClassKick = 4
+	// The PC terminal can be online at the same time,but other terminal only one of the endpoints can login.
+	PCAndOther = 5
+)

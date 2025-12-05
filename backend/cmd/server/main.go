@@ -2,9 +2,11 @@ package main
 
 import (
 	"backend/internal/api"
+	"backend/internal/im"
 	"backend/internal/model"
 	"backend/internal/pkg/database"
 	"backend/internal/pkg/snowflake"
+	"context"
 )
 
 func main() {
@@ -26,6 +28,8 @@ func main() {
 	db.AutoMigrate(&model.UserTimeline{})
 
 	r := api.NewGinRouter()
+	wsServer := im.NewWsServer()
+	wsServer.Run(context.Background())
 
 	r.Run()
 }
