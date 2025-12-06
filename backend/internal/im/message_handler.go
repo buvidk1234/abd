@@ -1,11 +1,14 @@
 package im
 
 import (
+	"backend/internal/pkg/kafka"
 	"backend/internal/service"
 	"context"
 	"encoding/json"
 	"log"
 	"sync"
+
+	"github.com/IBM/sarama"
 )
 
 const (
@@ -64,26 +67,40 @@ var _ MessageHandler = (*ServiceHandler)(nil)
 
 type ServiceHandler struct {
 	messageService *service.MessageService
+	producer       sarama.SyncProducer
 	// pushClient *
 }
 
-func NewServiceHandler(messageService *service.MessageService) *ServiceHandler {
+func NewServiceHandler(messageService *service.MessageService, producer sarama.SyncProducer) *ServiceHandler {
 	return &ServiceHandler{
 		messageService: messageService,
+		producer:       producer,
 	}
 }
 
 func (s *ServiceHandler) SendMessage(ctx context.Context, data *Req) (any, error) {
 	// encode
 	log.Print("SendMessage")
-	var sendMsgReq service.SendMessageReq
-	if err := json.Unmarshal(data.Data, &sendMsgReq); err != nil {
-		return nil, err
+	// var sendMsgReq service.SendMessageReq
+	// if err := json.Unmarshal(data.Data, &sendMsgReq); err != nil {
+	// 	return nil, err
+	// }
+	// err := s.messageService.SendMessage(ctx, sendMsgReq)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return nil, nil
+	msg := &sarama.ProducerMessage{
+		Topic: kafka.OnlinePushTopic,
+		Value: sarama.ByteEncoder(data.Data),
 	}
-	err := s.messageService.SendMessage(ctx, sendMsgReq)
+
+	partition, offset, err := s.producer.SendMessage(msg)
 	if err != nil {
+		log.Printf("FAILED to send kafka message: %v", err)
 		return nil, err
 	}
+	log.Printf("message sent to partition=%d offset=%d", partition, offset)
 	return nil, nil
 }
 

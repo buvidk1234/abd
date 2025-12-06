@@ -2,6 +2,7 @@ package im
 
 import (
 	"backend/internal/pkg/database"
+	"backend/internal/pkg/kafka"
 	"backend/internal/service"
 	"context"
 	"fmt"
@@ -19,7 +20,7 @@ type WsServer struct {
 	wsMaxConnNum      int64
 	onlineUserNum     atomic.Int64
 	onlineUserConnNum atomic.Int64
-	clients           UserMap
+	Clients           UserMap
 	clientPool        sync.Pool
 	handshakeTimeout  time.Duration
 	writeBufferSize   int
@@ -40,8 +41,12 @@ type kickHandler struct {
 }
 
 func NewWsServer() *WsServer {
+	producer, err := kafka.NewSyncProducer()
+	if err != nil {
+		panic(fmt.Sprintf("failed to create kafka producer: %v", err))
+	}
 	return &WsServer{
-		port:             80,
+		port:             8081,
 		wsMaxConnNum:     10000,
 		writeBufferSize:  4096,
 		handshakeTimeout: 5 * time.Second,
@@ -54,10 +59,10 @@ func NewWsServer() *WsServer {
 		unregisterChan:  make(chan *Client, 1000),
 		kickHandlerChan: make(chan *kickHandler, 1000),
 		validate:        validator.New(),
-		clients:         newUserMap(),
+		Clients:         newUserMap(),
 		// subscription: newSubscription(),
 		Compressor:     NewGzipCompressor(),
-		MessageHandler: NewServiceHandler(service.NewMessageService(database.GetDB())),
+		MessageHandler: NewServiceHandler(service.NewMessageService(database.GetDB()), producer),
 	}
 }
 
@@ -127,23 +132,23 @@ func (ws *WsServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ws *WsServer) registerClient(client *Client) {
-	oldClients, userOK, clientOK := ws.clients.Get(client.UserID, client.PlatformID)
+	oldClients, userOK, clientOK := ws.Clients.Get(client.UserID, client.PlatformID)
 
 	if !userOK {
-		ws.clients.Set(client.UserID, client)
+		ws.Clients.Set(client.UserID, client)
 		ws.onlineUserNum.Add(1)
 		ws.onlineUserConnNum.Add(1)
 	} else {
 		ws.multiTerminalLoginChecker(clientOK, oldClients, client)
 
-		ws.clients.Set(client.UserID, client)
+		ws.Clients.Set(client.UserID, client)
 		ws.onlineUserConnNum.Add(1)
 	}
 }
 
 func (ws *WsServer) unregisterClient(client *Client) {
 	defer ws.clientPool.Put(client)
-	isDeleteUser := ws.clients.DeleteClients(client.UserID, []*Client{client})
+	isDeleteUser := ws.Clients.DeleteClients(client.UserID, []*Client{client})
 	if isDeleteUser {
 		ws.onlineUserNum.Add(-1)
 	}

@@ -3,9 +3,11 @@ package main
 import (
 	"backend/internal/api"
 	"backend/internal/im"
+	"backend/internal/im/push"
 	"backend/internal/model"
 	"backend/internal/pkg/cache/redis"
 	"backend/internal/pkg/database"
+	"backend/internal/pkg/kafka"
 	"backend/internal/pkg/snowflake"
 	"context"
 	"os"
@@ -16,6 +18,7 @@ import (
 type AppConfig struct {
 	Redis     redis.Config     `yaml:"redis"`
 	Snowflake snowflake.Config `yaml:"snowflake"`
+	Kafka     kafka.Config     `yaml:"kafka"`
 }
 
 func main() {
@@ -27,6 +30,7 @@ func main() {
 	redis.Init(cfg.Redis)
 	database.Init()
 	snowflake.Init(cfg.Snowflake)
+	kafka.Init(cfg.Kafka)
 
 	db := database.GetDB()
 	db.AutoMigrate(&model.User{})
@@ -44,6 +48,7 @@ func main() {
 
 	r := api.NewGinRouter()
 	wsServer := im.NewWsServer()
+	push.InitAndRun(wsServer)
 	go wsServer.Run(context.Background())
 
 	r.Run()

@@ -5,6 +5,36 @@ redis:
   pool_size: 10
   min_idle_conns: 2
 
+# Kafka configuration - matches `internal/pkg/kafka.Config`
+kafka:
+  addr:
+    - "192.168.6.130:9092"
+  producerAck: "WaitForLocal"
+  compressType: "none"
+
+
+# Database connection configuration. Update `driver` and `dsn` for your DB.
+database:
+  # driver: sqlite3 | mysql | postgres
+  driver: "sqlite3"
+  # For sqlite in-memory test example
+  dsn: "file::memory:?cache=shared"
+  # Example MySQL DSN: "user:pass@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
+  max_open_conns: 25
+  max_idle_conns: 10
+
+# Server settings
+server:
+  addr: ":8080"
+  enableTLS: false
+  tls_cert: ""
+  tls_key: ""
+
 # Snowflake (unique id) config
 snowflake:
   machine_id: 1
+
+# Optional: application-level settings
+app:
+  log_level: "info"
+  jwt_signing_key: "replace-with-secret"

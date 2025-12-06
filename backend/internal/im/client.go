@@ -247,9 +247,12 @@ func (c *Client) close() {
 	c.server.UnRegister(c)
 }
 
-func (c *Client) pushMessage(msg []byte) error {
-	// TODO:
-	return nil
+func (c *Client) PushMessage(ctx context.Context, msg any) error {
+	resp := Resp{
+		ReqIdentifier: WSPushMsg,
+		Data:          msg,
+	}
+	return c.writeBinaryMsg(resp)
 }
 
 func (c *Client) activeHeartbeat(ctx context.Context) {

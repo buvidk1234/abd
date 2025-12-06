@@ -3,6 +3,7 @@ package im
 import (
 	"backend/internal/model"
 	"backend/internal/pkg/constant"
+	"backend/internal/pkg/kafka"
 	"backend/internal/pkg/snowflake"
 	"backend/internal/service"
 	"context"
@@ -39,7 +40,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 func TestServiceHandler_SendMessage(t *testing.T) {
 	db := setupTestDB(t)
 	svc := service.NewMessageService(db)
-	handler := NewServiceHandler(svc)
+	producer, _ := kafka.NewSyncProducer()
+	handler := NewServiceHandler(svc, producer)
 
 	// Prepare request data
 	sendReq := service.SendMessageReq{
@@ -66,7 +68,8 @@ func TestServiceHandler_SendMessage(t *testing.T) {
 func TestServiceHandler_PullSpecifiedConv(t *testing.T) {
 	db := setupTestDB(t)
 	svc := service.NewMessageService(db)
-	handler := NewServiceHandler(svc)
+	producer, _ := kafka.NewSyncProducer()
+	handler := NewServiceHandler(svc, producer)
 
 	// Prepare request data
 	pullReq := service.PullSpecifiedConvReq{
