@@ -30,7 +30,7 @@ type SendMessageReq struct {
 }
 
 func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) error {
-	conversationID := s.getConversationID(req.ConvType, req.SenderID, req.TargetID)
+	conversationID := GetConversationID(req.ConvType, req.SenderID, req.TargetID)
 
 	// TODO: 创建好友时或加入群聊时调用，初始化会话记录
 	s.InitConversationForUser(ctx, req)
@@ -199,7 +199,7 @@ func (s *MessageService) DeleteConversation(ctx context.Context, userID string, 
 
 // TODO: 成为好友，或加入群组时调用，初始化会话记录
 func (s *MessageService) InitConversationForUser(ctx context.Context, req SendMessageReq) error {
-	conversationID := s.getConversationID(req.ConvType, req.SenderID, req.TargetID)
+	conversationID := GetConversationID(req.ConvType, req.SenderID, req.TargetID)
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		switch req.ConvType {
 		case constant.SingleChatType:
@@ -244,7 +244,7 @@ func (s *MessageService) InitConversationForUser(ctx context.Context, req SendMe
 
 // TODO: 创建群组时调用，初始化群组会话记录
 func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, groupID string, memberIDs []string) error {
-	conversationID := s.getConversationID(constant.GroupChatType, "", groupID)
+	conversationID := GetConversationID(constant.GroupChatType, "", groupID)
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		seqConversation := model.SeqConversation{
 			ID:     conversationID,
@@ -272,7 +272,7 @@ func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, gro
 
 // ===================== Helper Functions =====================
 
-func (s *MessageService) getConversationID(ConvType int32, userID string, receiverID string) string {
+func GetConversationID(ConvType int32, userID string, receiverID string) string {
 	switch ConvType {
 	case constant.SingleChatType:
 		v1, _ := strconv.ParseInt(userID, 10, 64)
