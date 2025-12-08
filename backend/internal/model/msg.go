@@ -87,6 +87,9 @@ type Message struct {
 	// 	SenderNickname   string `gorm:"column:sender_nickname;type:varchar(128)"`
 	// 	SenderAvatarURL  string `gorm:"column:sender_avatar_url;type:varchar(255)"`
 
+	ConvType int32  `gorm:"column:conv_type;not null"`
+	TargetID string `gorm:"column:target_id;type:varchar(64);not null"`
+
 	// 分库分表策略：通常按 ConversationID 取模分表
 }
 

@@ -1,6 +1,8 @@
 package im
 
 import (
+	"backend/internal/pkg/kafka"
+	"backend/pkg/util"
 	"context"
 	"fmt"
 	"net"
@@ -14,13 +16,15 @@ import (
 )
 
 func TestWsHandler_RegisterClient(t *testing.T) {
+	kafka.Init(kafka.Config{Addr: []string{"192.168.6.130:9092"}})
 	ws := NewWsServer()
 
 	srv := httptest.NewServer(http.HandlerFunc(ws.wsHandler))
 	defer srv.Close()
 
+	token, _ := util.GenerateToken("123")
 	// build ws url from httptest server url
-	u := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws?platform_id=3&token=abc"
+	u := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws?platformID=3&token=" + token
 
 	d := websocket.Dialer{}
 	conn, _, err := d.Dial(u, nil)
@@ -37,7 +41,7 @@ func TestWsHandler_RegisterClient(t *testing.T) {
 		if client.PlatformID != 3 {
 			t.Fatalf("expected platform 3, got %d", client.PlatformID)
 		}
-		if client.token != "abc" {
+		if client.token != token {
 			t.Fatalf("expected token 'abc', got '%s'", client.token)
 		}
 	case <-time.After(1 * time.Second):
@@ -46,6 +50,7 @@ func TestWsHandler_RegisterClient(t *testing.T) {
 }
 
 func TestWsServer_Run_RegisterAndShutdown(t *testing.T) {
+	kafka.Init(kafka.Config{Addr: []string{"192.168.6.130:9092"}})
 	ws := NewWsServer()
 
 	// pick a free port
@@ -68,7 +73,9 @@ func TestWsServer_Run_RegisterAndShutdown(t *testing.T) {
 	// allow server to start
 	time.Sleep(100 * time.Millisecond)
 
-	u := "ws://127.0.0.1:" + fmt.Sprintf("%d", port) + "/ws?platform_id=7&token=tok-run"
+	token, _ := util.GenerateToken("123")
+
+	u := "ws://127.0.0.1:" + fmt.Sprintf("%d", port) + "/ws?platformID=7&token=" + token
 	d := websocket.Dialer{}
 	conn, _, err := d.Dial(u, nil)
 	if err != nil {

@@ -1,6 +1,7 @@
 package im
 
 import (
+	"backend/internal/pkg/kafka"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,9 @@ import (
 )
 
 func TestClient_ResetClient(t *testing.T) {
+	// 初始化 Kafka 配置，防止 NewWsServer panic
+	kafka.Init(kafka.Config{Addr: []string{"192.168.6.130:9092"}})
+
 	// Setup a test server to handle the websocket connection
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upgrader := websocket.Upgrader{}
@@ -24,7 +28,7 @@ func TestClient_ResetClient(t *testing.T) {
 	defer s.Close()
 
 	// Connect to the test server
-	u := "ws" + strings.TrimPrefix(s.URL, "http") + "/?send_id=user1&platform_id=1&compress=1&token=test_token"
+	u := "ws" + strings.TrimPrefix(s.URL, "http") + "/?sendID=user1&platformID=1&compression=gzip&token=test_token"
 	conn, _, err := websocket.DefaultDialer.Dial(u, nil)
 	if err != nil {
 		t.Fatalf("dial: %v", err)

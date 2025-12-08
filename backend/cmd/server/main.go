@@ -3,7 +3,8 @@ package main
 import (
 	"backend/internal/api"
 	"backend/internal/im"
-	"backend/internal/im/push"
+	"backend/internal/im/distributor"
+	"backend/internal/im/pusher"
 	"backend/internal/model"
 	"backend/internal/pkg/cache/redis"
 	"backend/internal/pkg/database"
@@ -48,7 +49,9 @@ func main() {
 
 	r := api.NewGinRouter()
 	wsServer := im.NewWsServer()
-	push.InitAndRun(wsServer)
+	pusher.InitAndRun(wsServer)
+	distributor := distributor.NewDistributor(im.NewWsServer())
+	go distributor.Start()
 	go wsServer.Run(context.Background())
 
 	r.Run()

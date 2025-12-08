@@ -1,7 +1,8 @@
-package push
+package pusher
 
 import (
 	"backend/internal/im"
+	"backend/internal/model"
 	"backend/internal/pkg/constant"
 	"backend/internal/pkg/database"
 	"backend/internal/pkg/kafka"
@@ -38,7 +39,7 @@ func (p *Pusher) PushMessageToUser() error {
 			log.Printf("ERROR: %v", err)
 		}
 	}()
-	pushToUsers := func(msg *service.SendMessageReq) error {
+	pushToUsers := func(msg *model.Message) error {
 		log.Printf("Push message to users: %+v", msg)
 		switch msg.ConvType {
 		case constant.SingleChatType:
@@ -78,14 +79,14 @@ func (p *Pusher) PushMessageToUser() error {
 }
 
 type onlinePushHandler struct {
-	fn func(msg *service.SendMessageReq) error
+	fn func(msg *model.Message) error
 }
 
 func (onlinePushHandler) Setup(_ sarama.ConsumerGroupSession) error   { return nil }
 func (onlinePushHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
 func (p onlinePushHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		var m service.SendMessageReq
+		var m model.Message
 		if err := json.Unmarshal(msg.Value, &m); err != nil {
 			log.Printf("push: invalid message json topic=%s partition=%d offset=%d err=%v", msg.Topic, msg.Partition, msg.Offset, err)
 			// 解析失败，决定是否 mark（通常先记录并 mark 防止死循环），或存储以便人工检查

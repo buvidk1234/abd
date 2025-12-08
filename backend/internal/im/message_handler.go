@@ -91,7 +91,7 @@ func (s *ServiceHandler) SendMessage(ctx context.Context, data *Req) (any, error
 	// }
 	// return nil, nil
 	msg := &sarama.ProducerMessage{
-		Topic: kafka.OnlinePushTopic,
+		Topic: kafka.ComingMessageTopic,
 		Value: sarama.ByteEncoder(data.Data),
 	}
 
