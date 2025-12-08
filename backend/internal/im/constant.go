@@ -3,13 +3,16 @@ package im
 import "time"
 
 const (
-	WsUserID         = "sendID"
-	CommonUserID     = "userID"
-	PlatformID       = "platformID"
+	// Websocket URL parameters
+	WsUserID                = "sendID"
+	PlatformID              = "platformID"
+	Token                   = "token"
+	Compression             = "compression" //compression == "gzip" means use gzip compression
+	GzipCompressionProtocol = "gzip"
+
+	// Additional parameters in context
 	ConnID           = "connID"
-	Token            = "token"
 	OperationID      = "operationID"
-	Compression      = "compression"
 	BackgroundStatus = "isBackground"
 	SendResponse     = "isMsgResp"
 )

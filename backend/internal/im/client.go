@@ -55,12 +55,13 @@ func (c *Client) ResetClient(respWriter http.ResponseWriter, req *http.Request, 
 	c.req = req
 	c.conn = conn
 	c.server = wsServer
-	c.UserID = req.URL.Query().Get("send_id")
-	c.PlatformID, _ = strconv.Atoi(req.URL.Query().Get("platform_id"))
-	c.IsCompress = req.URL.Query().Get("compress") == "1"
+	// parse URL parameters
+	c.UserID = req.URL.Query().Get(WsUserID)
+	c.PlatformID, _ = strconv.Atoi(req.URL.Query().Get(PlatformID))
+	c.IsCompress = req.URL.Query().Get(Compression) == GzipCompressionProtocol
+	c.token = req.URL.Query().Get(Token)
 
 	c.closed.Store(false)
-	c.token = req.URL.Query().Get("token")
 	c.hbCtx, c.hbCancel = context.WithCancel(req.Context())
 
 	c.Encoder = NewJsonEncoder()
@@ -114,11 +115,18 @@ func (c *Client) readMessage() {
 
 	for {
 		messageType, message, err := c.conn.ReadMessage()
+
+		if c.closed.Load() {
+			log.Printf("connection is closed: %v", c.req.Context())
+			c.closedErr = errors.New("connection is closed")
+			return
+		}
+
 		if err != nil {
 			log.Printf("readMessage: %v", err)
 			return
 		}
-		log.Print("读取到信息")
+		log.Println("读取到信息")
 
 		switch messageType {
 		case MessageBinary:
@@ -133,6 +141,7 @@ func (c *Client) readMessage() {
 		case PingMessage:
 			c.conn.WriteMessage(PongMessage, nil)
 		case CloseMessage:
+			c.closedErr = errors.New("client actively close the connection")
 			return
 		default:
 		}
@@ -166,11 +175,13 @@ func (c *Client) handleMessage(b []byte) error {
 	log.Print("调用后端服务")
 	switch binaryReq.ReqIdentifier {
 	case WSSendMsg:
-		log.Print("发信息")
+		log.Println("发信息")
 		resp, err = c.server.SendMessage(ctx, binaryReq)
 	case WSPullSpecifiedConv:
+		log.Println("拉取指定会话")
 		resp, err = c.server.PullSpecifiedConv(ctx, binaryReq)
 	case WSPullConvList:
+		log.Println("拉取会话列表")
 		resp, err = c.server.PullConvList(ctx, binaryReq)
 	default:
 		log.Printf("unknown req identifier: %d", binaryReq.ReqIdentifier)

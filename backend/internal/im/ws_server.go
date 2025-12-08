@@ -4,8 +4,10 @@ import (
 	"backend/internal/pkg/database"
 	"backend/internal/pkg/kafka"
 	"backend/internal/service"
+	"backend/pkg/util"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -32,6 +34,8 @@ type WsServer struct {
 	validate        *validator.Validate
 	Compressor
 	MessageHandler
+
+	authClient *service.UserService
 }
 
 type kickHandler struct {
@@ -108,8 +112,22 @@ func (ws *WsServer) Run(ctx context.Context) {
 
 func (ws *WsServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 
+	/*
+		1. check max connection
+		2. ckeck token
+		3. upgrade to websocket
+		4. create client
+		5. register client
+		6. start readMessage loop
+	*/
 	if ws.onlineUserConnNum.Load() >= ws.wsMaxConnNum {
 		http.Error(w, "too many connections", http.StatusServiceUnavailable)
+		return
+	}
+
+	if _, err := util.ParseToken(r.URL.Query().Get(Token)); err != nil {
+		log.Println("invalid token:", err)
+		http.Error(w, "invalid token:"+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
