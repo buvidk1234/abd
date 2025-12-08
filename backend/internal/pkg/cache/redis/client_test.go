@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"testing"
 )
 
@@ -15,9 +16,9 @@ func TestClient(t *testing.T) {
 	}
 
 	Init(cfg)
-
-	RDB.Set(Ctx, "test_key", "test_value", 0)
-	val, err := RDB.Get(Ctx, "test_key").Result()
+	ctx := context.Background()
+	RDB.Set(ctx, "test_key", "test_value", 0)
+	val, err := RDB.Get(ctx, "test_key").Result()
 	if err != nil {
 		t.Fatalf("failed to get value: %v", err)
 	}
