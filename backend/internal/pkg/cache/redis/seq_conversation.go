@@ -18,7 +18,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type seqConversationCacheRedis struct {
+type SeqConversationCacheRedis struct {
 	db               *gorm.DB
 	client           *redis.Client
 	lockTime         time.Duration
@@ -26,8 +26,8 @@ type seqConversationCacheRedis struct {
 	minSeqExpireTime time.Duration
 }
 
-func NewSeqConversationCacheRedis(db *gorm.DB, client *redis.Client) *seqConversationCacheRedis {
-	return &seqConversationCacheRedis{
+func NewSeqConversationCacheRedis(db *gorm.DB, client *redis.Client) *SeqConversationCacheRedis {
+	return &SeqConversationCacheRedis{
 		db:               db,
 		lockTime:         time.Second * 3,
 		dataTime:         time.Hour * 24 * 365,
@@ -36,12 +36,12 @@ func NewSeqConversationCacheRedis(db *gorm.DB, client *redis.Client) *seqConvers
 	}
 }
 
-func (s *seqConversationCacheRedis) Malloc(ctx context.Context, conversationID string, size int64) (int64, error) {
+func (s *SeqConversationCacheRedis) Malloc(ctx context.Context, conversationID string, size int64) (int64, error) {
 	seq, _, err := s.mallocTime(ctx, conversationID, size)
 	return seq, err
 }
 
-func (s *seqConversationCacheRedis) mallocTime(ctx context.Context, conversationID string, size int64) (int64, int64, error) {
+func (s *SeqConversationCacheRedis) mallocTime(ctx context.Context, conversationID string, size int64) (int64, int64, error) {
 	if size < 0 {
 		return 0, 0, errors.New("size must be greater than 0")
 	}
@@ -93,7 +93,7 @@ func (s *seqConversationCacheRedis) mallocTime(ctx context.Context, conversation
 	return 0, 0, fmt.Errorf("malloc seq waiting for lock timeout conversationID=%s size=%d", conversationID, size)
 }
 
-func (s *seqConversationCacheRedis) mallocFromDB(ctx context.Context, conversationID string, size int64) (int64, error) {
+func (s *SeqConversationCacheRedis) mallocFromDB(ctx context.Context, conversationID string, size int64) (int64, error) {
 	// newseq is distributed max seq, (max,+inf)
 	var seqModel model.SeqConversation
 	var oldSeq int64
@@ -114,7 +114,7 @@ func (s *seqConversationCacheRedis) mallocFromDB(ctx context.Context, conversati
 }
 
 // malloc size=0 is to get the current seq size>0 is to allocate seq
-func (s *seqConversationCacheRedis) malloc(ctx context.Context, key string, size int64) ([]int64, error) {
+func (s *SeqConversationCacheRedis) malloc(ctx context.Context, key string, size int64) ([]int64, error) {
 	/*
 		1. key不存在，创建，加锁，去申请序列号
 		2. key存在且被加锁，有线程在申请序列号，等待
@@ -196,7 +196,7 @@ return result
 	return result, nil
 }
 
-func (s *seqConversationCacheRedis) getMallocSize(conversationID string, size int64) int64 {
+func (s *SeqConversationCacheRedis) getMallocSize(conversationID string, size int64) int64 {
 	if size == 0 {
 		return 0
 	}
@@ -214,7 +214,7 @@ func IsGroupConversationID(conversationID string) bool {
 	return strings.HasPrefix(conversationID, "g")
 }
 
-func (s *seqConversationCacheRedis) setSeqRetry(ctx context.Context, key string, owner int64, currSeq int64, lastSeq int64, mill int64) {
+func (s *SeqConversationCacheRedis) setSeqRetry(ctx context.Context, key string, owner int64, currSeq int64, lastSeq int64, mill int64) {
 	for i := 0; i < 10; i++ {
 		state, err := s.setSeq(ctx, key, owner, currSeq, lastSeq, mill)
 		if err != nil {
@@ -238,7 +238,7 @@ func (s *seqConversationCacheRedis) setSeqRetry(ctx context.Context, key string,
 	log.Printf("set seq cache retrying still failed key=%s owner=%d currSeq=%d lastSeq=%d", key, owner, currSeq, lastSeq)
 }
 
-func (s *seqConversationCacheRedis) wait(ctx context.Context) error {
+func (s *SeqConversationCacheRedis) wait(ctx context.Context) error {
 	timer := time.NewTimer(time.Second / 4)
 	defer timer.Stop()
 	select {
@@ -249,7 +249,7 @@ func (s *seqConversationCacheRedis) wait(ctx context.Context) error {
 	}
 }
 
-func (s *seqConversationCacheRedis) setSeq(ctx context.Context, key string, owner int64, currSeq int64, lastSeq int64, mill int64) (int64, error) {
+func (s *SeqConversationCacheRedis) setSeq(ctx context.Context, key string, owner int64, currSeq int64, lastSeq int64, mill int64) (int64, error) {
 	if lastSeq < currSeq {
 		return 0, errors.New("lastSeq must be greater than currSeq")
 	}

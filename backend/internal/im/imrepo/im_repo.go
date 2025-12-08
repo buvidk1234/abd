@@ -1,0 +1,71 @@
+package imrepo
+
+import (
+	"backend/internal/model"
+	"backend/internal/pkg/cache/cachekey"
+	rds "backend/internal/pkg/cache/redis"
+	"context"
+	"encoding/json"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+const msgCacheTimeout = time.Hour * 24
+
+type ImRepo struct {
+	db      *gorm.DB
+	rdb     *redis.Client
+	seqConv *rds.SeqConversationCacheRedis
+}
+
+func NewImRepo(db *gorm.DB, rdb *redis.Client) *ImRepo {
+	return &ImRepo{
+		db:      db,
+		rdb:     rdb,
+		seqConv: rds.NewSeqConversationCacheRedis(db, rdb),
+	}
+}
+
+func (r *ImRepo) BatchStoreMsgToRedis(ctx context.Context, conversationID string, msgs []*model.Message) error {
+	len := int64(len(msgs))
+	lastSeq, err := r.seqConv.Malloc(ctx, conversationID, len)
+	if err != nil {
+		return err
+	}
+	for _, msg := range msgs {
+		lastSeq++
+		msg.Seq = lastSeq
+	}
+
+	pipe := r.rdb.Pipeline()
+
+	for _, msg := range msgs {
+		data, err := json.Marshal(msg)
+		if err != nil {
+			return err
+		}
+		// 将 Set 命令加入管道，注意这里不会立即执行
+		pipe.Set(ctx, cachekey.GetMsgCacheKey(conversationID, msg.Seq), string(data), msgCacheTimeout)
+	}
+
+	// 一次性执行管道中的所有命令
+	_, err = pipe.Exec(ctx)
+	return err
+
+}
+func (r *ImRepo) BatchStoreMsgToDB(ctx context.Context, msgs []*model.Message) error {
+	if len(msgs) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}}, // clientID
+		DoUpdates: clause.AssignmentColumns([]string{"content", "send_time"}),
+	}).Create(msgs).Error
+}
+
+func (r *ImRepo) BatchGetMsg(ctx context.Context, key string, start, end int64) ([]string, error) {
+	return nil, nil
+}
