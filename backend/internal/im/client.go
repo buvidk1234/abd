@@ -129,15 +129,15 @@ func (c *Client) readMessage() {
 		log.Println("读取到信息")
 
 		switch messageType {
-		case MessageBinary:
-			_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
-			c.handleMessage(message)
 		case MessageText:
 			_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
-			if err := c.handleTextMessage(message); err != nil {
-				log.Printf("handleTextMessage: %v", err)
-				return
-			}
+			c.handleMessage(message)
+		//case MessageText:
+		//	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		//	if err := c.handleTextMessage(message); err != nil {
+		//		log.Printf("handleTextMessage: %v", err)
+		//		return
+		//	}
 		case PingMessage:
 			c.conn.WriteMessage(PongMessage, nil)
 		case CloseMessage:
@@ -213,16 +213,16 @@ func (c *Client) writeBinaryMsg(resp Resp) error {
 	if err != nil {
 		return err
 	}
-	if c.IsCompress {
-		data, err = c.server.Compress(data)
-		if err != nil {
-			return err
-		}
-	}
+	//if c.IsCompress {
+	//	data, err = c.server.Compress(data)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-	err = c.conn.WriteMessage(MessageBinary, data)
+	err = c.conn.WriteMessage(MessageText, data)
 	return err
 }
 

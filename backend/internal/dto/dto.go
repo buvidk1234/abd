@@ -7,6 +7,7 @@ import (
 
 // UserInfo
 type UserInfo struct {
+	Username  string `json:"username"`
 	UserID    int64  `json:"user_id"`
 	Nickname  string `json:"nickname"`
 	AvatarURL string `json:"avatar_url"`
@@ -16,6 +17,7 @@ type UserInfo struct {
 
 func ConvertToUserInfo(user model.User) UserInfo {
 	return UserInfo{
+		Username:  user.Username,
 		UserID:    user.UserID,
 		Nickname:  user.Nickname,
 		AvatarURL: user.AvatarURL,
