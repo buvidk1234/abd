@@ -57,6 +57,20 @@ func (a *UserApi) GetUsersPublicInfo(c *gin.Context) {
 	apiresp.GinSuccess(c, userInfo)
 }
 
+func (a *UserApi) SearchUser(c *gin.Context) {
+	var req service.SearchUserReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	users, err := a.userService.SearchUser(c.Request.Context(), req)
+	if err != nil {
+		apiresp.GinError(c, err)
+		return
+	}
+	apiresp.GinSuccess(c, users)
+}
+
 func (a *UserApi) UserLogin(c *gin.Context) {
 	var req service.UserLoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -21,6 +21,26 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
+// SearchUserReq 搜索用户请求
+type SearchUserReq struct {
+	Keyword string `form:"keyword" binding:"required"`
+}
+
+func (u *UserService) SearchUser(ctx context.Context, req SearchUserReq) ([]dto.UserInfo, error) {
+	var users []model.User
+	// Search by username or nickname or phone
+	// Note: checking username and nickname for now.
+	if err := u.db.WithContext(ctx).Model(&model.User{}).Where("username LIKE ? OR nickname LIKE ?", "%"+req.Keyword+"%", "%"+req.Keyword+"%").Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	dtos := make([]dto.UserInfo, len(users))
+	for i, user := range users {
+		dtos[i] = dto.ConvertToUserInfo(user)
+	}
+	return dtos, nil
+}
+
 // UserRegisterReq 用户注册请求
 type UserRegisterReq struct {
 	Username  string `json:"username" binding:"required"`

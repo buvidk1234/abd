@@ -47,6 +47,7 @@ func NewGinRouter() *gin.Engine {
 		{
 			userRouterGroup.POST("/update-info", u.UpdateUserInfo)
 			userRouterGroup.GET("/info", u.GetUsersPublicInfo)
+			userRouterGroup.GET("/search", u.SearchUser)
 		}
 
 		friendRouterGroup := auth.Group("/friend")
