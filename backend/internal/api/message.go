@@ -22,7 +22,7 @@ func (a *MessageApi) SendMessage(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.SenderID = c.GetString("my_user_id")
+	req.SenderID = c.GetString("user_id")
 	err := a.s.SendMessage(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -37,7 +37,7 @@ func (a *MessageApi) PullSpecifiedConv(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.UserID = c.GetString("my_user_id")
+	req.UserID = c.GetString("user_id")
 	resp, err := a.s.PullSpecifiedConv(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -52,7 +52,7 @@ func (a *MessageApi) PullConvList(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.UserID = c.GetString("my_user_id")
+	req.UserID = c.GetString("user_id")
 	resp, err := a.s.PullConvList(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -62,7 +62,7 @@ func (a *MessageApi) PullConvList(c *gin.Context) {
 }
 
 func (a *MessageApi) DeleteConversation(c *gin.Context) {
-	userID := c.GetString("my_user_id")
+	userID := c.GetString("user_id")
 	conversationID := c.Param("conversation_id")
 	err := a.s.DeleteConversation(c.Request.Context(), userID, conversationID)
 	if err != nil {

@@ -40,7 +40,7 @@ func (a *UserApi) UpdateUserInfo(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	err := a.userService.UpdateUserInfo(c.Request.Context(), req, c.GetString("my_user_id"))
+	err := a.userService.UpdateUserInfo(c.Request.Context(), req, c.GetString("user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -49,7 +49,7 @@ func (a *UserApi) UpdateUserInfo(c *gin.Context) {
 }
 
 func (a *UserApi) GetUsersPublicInfo(c *gin.Context) {
-	userInfo, err := a.userService.GetUsersPublicInfo(c.Request.Context(), c.GetString("my_user_id"))
+	userInfo, err := a.userService.GetUsersPublicInfo(c.Request.Context(), c.GetString("user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -96,7 +96,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// 解析 Token
-		my_user_id, err := util.ParseToken(token)
+		user_id, err := util.ParseToken(token)
 		if err != nil {
 			c.JSON(401, gin.H{"error": "Invalid or expired token"})
 			c.Abort() // 终止请求
@@ -104,7 +104,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// 设置用户 ID 到上下文
-		c.Set("my_user_id", my_user_id)
+		c.Set("user_id", user_id)
 		c.Next() // 继续处理请求
 	}
 }

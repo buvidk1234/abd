@@ -53,7 +53,7 @@ func (f *FriendApi) GetFriendList(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	resp, err := f.friendService.GetPaginationFriends(c.Request.Context(), req, c.GetString("my_user_id"))
+	resp, err := f.friendService.GetPaginationFriends(c.Request.Context(), req, c.GetString("user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -64,7 +64,7 @@ func (f *FriendApi) GetFriendList(c *gin.Context) {
 // 获取指定好友信息
 func (f *FriendApi) GetSpecifiedFriendsInfo(c *gin.Context) {
 	friendUserID := c.Param("friendId")
-	friendInfo, err := f.friendService.GetSpecifiedFriendInfo(c.Request.Context(), c.GetString("my_user_id"), friendUserID)
+	friendInfo, err := f.friendService.GetSpecifiedFriendInfo(c.Request.Context(), c.GetString("user_id"), friendUserID)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -75,7 +75,7 @@ func (f *FriendApi) GetSpecifiedFriendsInfo(c *gin.Context) {
 // 删除好友
 func (f *FriendApi) DeleteFriend(c *gin.Context) {
 	friendUserID := c.Param("friendId")
-	err := f.friendService.DeleteFriend(c.Request.Context(), c.GetString("my_user_id"), friendUserID)
+	err := f.friendService.DeleteFriend(c.Request.Context(), c.GetString("user_id"), friendUserID)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -120,7 +120,7 @@ func (f *FriendApi) AddBlack(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.OwnerUserID = c.GetString("my_user_id")
+	req.OwnerUserID = c.GetString("user_id")
 	req.OperatorUserID = req.OwnerUserID
 	if err := f.friendService.AddBlack(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
@@ -136,7 +136,7 @@ func (f *FriendApi) RemoveBlack(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.OwnerUserID = c.GetString("my_user_id")
+	req.OwnerUserID = c.GetString("user_id")
 	if err := f.friendService.RemoveBlack(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -151,7 +151,7 @@ func (f *FriendApi) GetPaginationBlacks(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.OwnerUserID = c.GetString("my_user_id")
+	req.OwnerUserID = c.GetString("user_id")
 	resp, err := f.friendService.GetPaginationBlacks(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
