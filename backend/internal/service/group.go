@@ -25,7 +25,7 @@ type CreateGroupReq struct {
 	GroupName         string `json:"groupName" binding:"required"`
 	AvatarURL         string `json:"avatarURL" binding:"required"`
 	Ex                string `json:"ex"`
-	CreatorUserID     string `json:"creatorUserID"`
+	CreatorUserID     int64  `json:"creatorUserID,string" binding:"required"`
 	GroupType         int32  `json:"groupType" default:"1"`
 	NeedVerification  int32  `json:"needVerification" default:"1"`
 	LookMemberInfo    int32  `json:"lookMemberInfo" default:"1"`
@@ -34,38 +34,38 @@ type CreateGroupReq struct {
 
 type JoinGroupReq struct {
 	GroupID       string `json:"groupID"`
-	UserID        string `json:"userID"`
+	UserID        int64  `json:"userID,string"`
 	ReqMsg        string `json:"reqMsg"`
 	JoinSource    int32  `json:"joinSource"`
-	InviterUserID string `json:"inviterUserID"`
+	InviterUserID int64  `json:"inviterUserID,string"`
 }
 
 type QuitGroupReq struct {
 	GroupID        string `json:"groupID"`
-	UserID         string `json:"userID"`
-	OperatorUserID string `json:"operatorUserID"`
+	UserID         int64  `json:"userID,string"`
+	OperatorUserID int64  `json:"operatorUserID"`
 }
 
 type InviteUserToGroupReq struct {
 	GroupID       string `json:"groupID"`
-	InviterUserID string `json:"inviterUserID"`
-	InviteeUserID string `json:"inviteeUserID" binding:"required"`
+	InviterUserID int64  `json:"inviterUserID,string"`
+	InviteeUserID int64  `json:"inviteeUserID,string" binding:"required"`
 }
 
 type KickGroupMemberReq struct {
 	GroupID        string `json:"groupID"`
-	OperatorUserID string `json:"operatorUserID"`
-	TargetUserID   string `json:"targetUserID"`
+	OperatorUserID int64  `json:"operatorUserID,string"`
+	TargetUserID   int64  `json:"targetUserID,string"`
 }
 
 type DismissGroupReq struct {
 	GroupID        string `json:"groupID"`
-	OperatorUserID string `json:"operatorUserID"`
+	OperatorUserID int64  `json:"operatorUserID,string"`
 }
 
 type SetGroupInfoReq struct {
 	GroupID           string  `json:"groupID"`
-	OperatorUserID    string  `json:"operatorUserID"`
+	OperatorUserID    int64   `json:"operatorUserID,string"`
 	GroupName         *string `json:"groupName"`
 	AvatarURL         *string `json:"avatarURL"`
 	Notification      *string `json:"notification"`
@@ -77,8 +77,8 @@ type SetGroupInfoReq struct {
 
 type SetGroupMemberInfoReq struct {
 	GroupID        string  `json:"groupID"`
-	UserID         string  `json:"userID"`
-	OperatorUserID string  `json:"operatorUserID"`
+	UserID         int64   `json:"userID,string"`
+	OperatorUserID int64   `json:"operatorUserID,string"`
 	Nickname       *string `json:"nickname"`
 	AvatarURL      *string `json:"avatarURL"`
 	RoleLevel      *int32  `json:"roleLevel"`
@@ -379,7 +379,7 @@ func (s *GroupService) getGroup(ctx context.Context, groupID string) (model.Grou
 	return group, nil
 }
 
-func (s *GroupService) getMember(ctx context.Context, groupID, userID string) (model.GroupMember, error) {
+func (s *GroupService) getMember(ctx context.Context, groupID string, userID int64) (model.GroupMember, error) {
 	var member model.GroupMember
 	if err := s.db.WithContext(ctx).Where("group_id = ? AND user_id = ?", groupID, userID).First(&member).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

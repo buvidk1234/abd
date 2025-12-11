@@ -97,7 +97,7 @@ type GroupInfo struct {
 	CreatedAt         time.Time `json:"createdAt"`
 	Ex                string    `json:"ex"`
 	Status            int32     `json:"status"`
-	CreatorUserID     string    `json:"creatorUserID"`
+	CreatorUserID     int64     `json:"creatorUserID"`
 	GroupType         int32     `json:"groupType"`
 	NeedVerification  int32     `json:"needVerification"`
 	LookMemberInfo    int32     `json:"lookMemberInfo"`
@@ -123,7 +123,7 @@ func ConvertToGroupInfo(group model.Group) GroupInfo {
 type GroupMemberInfo struct {
 	ID        uint      `json:"id"`
 	GroupID   string    `json:"groupID"`
-	UserID    string    `json:"userID"`
+	UserID    int64     `json:"userID"`
 	Nickname  string    `json:"nickname"`
 	AvatarURL string    `json:"avatarURL"`
 	RoleLevel int32     `json:"roleLevel"`

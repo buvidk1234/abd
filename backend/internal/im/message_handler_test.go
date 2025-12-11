@@ -45,9 +45,9 @@ func TestServiceHandler_SendMessage(t *testing.T) {
 
 	// Prepare request data
 	sendReq := service.SendMessageReq{
-		SenderID: "user1",
+		SenderID: 1,
 		ConvType: constant.SingleChatType,
-		TargetID: "user2",
+		TargetID: 2,
 		MsgType:  1,
 		Content:  "hello",
 	}
@@ -73,7 +73,7 @@ func TestServiceHandler_PullSpecifiedConv(t *testing.T) {
 
 	// Prepare request data
 	pullReq := service.PullSpecifiedConvReq{
-		UserID:  "user1",
+		UserID:  1,
 		ConvID:  "c1",
 		ConvSeq: 0,
 	}

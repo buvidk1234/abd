@@ -5,7 +5,7 @@ import (
 )
 
 func TestGenerateAndParseJWT(t *testing.T) {
-	userID := "test_user_123"
+	userID := int64(123456)
 	t.Log("begin")
 
 	token, err := GenerateToken(userID)
@@ -19,5 +19,5 @@ func TestGenerateAndParseJWT(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to parse token: %v", err)
 	}
-	t.Logf("userID: %s", parsedUserID)
+	t.Logf("userID: %d", parsedUserID)
 }

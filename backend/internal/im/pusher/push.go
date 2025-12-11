@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strconv"
 
 	"github.com/IBM/sarama"
 )
@@ -43,27 +44,30 @@ func (p *Pusher) PushMessageToUser() error {
 		log.Printf("Push message to users: %+v", msg)
 		switch msg.ConvType {
 		case constant.SingleChatType:
-			clients, have := p.wsServer.Clients.GetAll(msg.TargetID)
+			targetIDStr := strconv.FormatInt(msg.TargetID, 10)
+			clients, have := p.wsServer.Clients.GetAll(targetIDStr)
 			if !have {
 				return nil
 			}
 			for _, client := range clients {
 				if err := client.PushMessage(context.Background(), msg); err != nil {
-					log.Printf("push message to user %s failed: %v", msg.TargetID, err)
+					log.Printf("push message to user %s failed: %v", targetIDStr, err)
 				}
 			}
 		case constant.GroupChatType:
 			log.Printf("[push] group message push not implemented")
-			memberInfos, _ := p.group.GetGroupMemberList(context.Background(), msg.TargetID)
+			targetIDStr := strconv.FormatInt(msg.TargetID, 10)
+			memberInfos, _ := p.group.GetGroupMemberList(context.Background(), targetIDStr)
 			for _, member := range memberInfos {
 				memberID := member.UserID
-				clients, have := p.wsServer.Clients.GetAll(memberID)
+				memberIDStr := strconv.FormatInt(memberID, 10)
+				clients, have := p.wsServer.Clients.GetAll(memberIDStr)
 				if !have {
 					continue
 				}
 				for _, client := range clients {
 					if err := client.PushMessage(context.Background(), msg); err != nil {
-						log.Printf("push message to user %s failed: %v", memberID, err)
+						log.Printf("push message to user %s failed: %v", memberIDStr, err)
 					}
 				}
 			}

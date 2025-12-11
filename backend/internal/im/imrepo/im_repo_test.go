@@ -37,7 +37,7 @@ func TestImRepo(t *testing.T) {
 	for i := 0; i < msgCount; i++ {
 		msgs = append(msgs, &model.Message{
 			ConversationID: conversationID,
-			SenderID:       "user_test_001",
+			SenderID:       1001,
 			Content:        ("hello world " + time.Now().String()),
 			MsgType:        1,
 			SendTime:       time.Now().UnixMilli(),
@@ -95,7 +95,7 @@ func TestBatchStoreMsgToDB(t *testing.T) {
 			ID:             1001,
 			ConversationID: conversationID,
 			Seq:            101,
-			SenderID:       "user_A",
+			SenderID:       2001,
 			Content:        "msg 1 content",
 			MsgType:        1,
 			SendTime:       time.Now().UnixMilli(),
@@ -105,7 +105,7 @@ func TestBatchStoreMsgToDB(t *testing.T) {
 			ID:             1002,
 			ConversationID: conversationID,
 			Seq:            102,
-			SenderID:       "user_A",
+			SenderID:       2001,
 			Content:        "msg 2 content",
 			MsgType:        1,
 			SendTime:       time.Now().UnixMilli(),

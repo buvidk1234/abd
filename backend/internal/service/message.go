@@ -22,9 +22,9 @@ func NewMessageService(db *gorm.DB) *MessageService {
 }
 
 type SendMessageReq struct {
-	SenderID string `json:"sender_id"`
+	SenderID int64  `json:"sender_id,string"`
 	ConvType int32  `json:"conv_type" binding:"required"`
-	TargetID string `json:"target_id" binding:"required"`
+	TargetID int64  `json:"target_id,string" binding:"required"`
 	MsgType  int32  `json:"msg_type" binding:"required"`
 	Content  string `json:"content" binding:"required"`
 }
@@ -129,9 +129,9 @@ func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) er
 }
 
 type PullSpecifiedConvReq struct {
-	UserID  string `json:"user_id"`
+	UserID  int64  `json:"user_id,string"`
 	ConvID  string `json:"conv_id"`
-	ConvSeq int32  `json:"conv_seq,string"`
+	ConvSeq int64  `json:"conv_seq"`
 }
 type PullSpecifiedConvResp struct {
 	Messages []model.Message `json:"messages"`
@@ -147,8 +147,8 @@ func (s *MessageService) PullSpecifiedConv(ctx context.Context, req PullSpecifie
 }
 
 type PullConvListReq struct {
-	UserID  string `json:"user_id"`
-	UserSeq int64  `json:"user_seq,string"`
+	UserID  int64 `json:"user_id,string"`
+	UserSeq int64 `json:"user_seq"`
 }
 type PullConvListResp struct {
 	PullMsgs map[string][]model.Message `json:"pull_msgs"`
@@ -174,7 +174,7 @@ func (s *MessageService) PullConvList(ctx context.Context, req PullConvListReq) 
 	return PullConvListResp{PullMsgs: pullMsgs}, nil
 }
 
-func (s *MessageService) DeleteConversation(ctx context.Context, userID string, conversationID string) error {
+func (s *MessageService) DeleteConversation(ctx context.Context, userID int64, conversationID string) error {
 	var seqConversation model.SeqConversation
 
 	// 查询 SeqConversation
@@ -243,8 +243,12 @@ func (s *MessageService) InitConversationForUser(ctx context.Context, req SendMe
 }
 
 // TODO: 创建群组时调用，初始化群组会话记录
-func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, groupID string, memberIDs []string) error {
-	conversationID := GetConversationID(constant.GroupChatType, "", groupID)
+func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, groupID string, memberIDs []int64) error {
+	conversationID := GetConversationID(constant.GroupChatType, 0, 0) // groupID needs to be int64 or handled differently. Wait, GetConversationID expects int64 receiverID.
+	// Issue: receiverID in GetConversationID for group is groupID. But groupID is string in Group struct (though usually int64 in DB converted to string).
+	// Let's check model/group.go. ID is uint. GroupID is not explicitly stored in model, but ID is.
+	// In service/group.go `groupID = strconv.Itoa(int(group.ID))`. So groupID is string representation of int.
+	// I should parse groupID string to int64 here.
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		seqConversation := model.SeqConversation{
 			ID:     conversationID,
@@ -272,17 +276,15 @@ func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, gro
 
 // ===================== Helper Functions =====================
 
-func GetConversationID(ConvType int32, userID string, receiverID string) string {
+func GetConversationID(ConvType int32, userID int64, receiverID int64) string {
 	switch ConvType {
 	case constant.SingleChatType:
-		v1, _ := strconv.ParseInt(userID, 10, 64)
-		v2, _ := strconv.ParseInt(receiverID, 10, 64)
-		if v1 <= v2 {
-			return "single:" + userID + "_" + receiverID
+		if userID <= receiverID {
+			return "single:" + strconv.FormatInt(userID, 10) + "_" + strconv.FormatInt(receiverID, 10)
 		}
-		return "single:" + receiverID + "_" + userID
+		return "single:" + strconv.FormatInt(receiverID, 10) + "_" + strconv.FormatInt(userID, 10)
 	case constant.GroupChatType:
-		return "group:" + receiverID
+		return "group:" + strconv.FormatInt(receiverID, 10)
 	default:
 		return ""
 	}

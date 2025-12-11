@@ -17,7 +17,7 @@ func (SeqConversation) TableName() string {
 
 type Conversation struct {
 	// 1. 联合主键
-	OwnerID        string `gorm:"column:owner_id;type:varchar(64);primaryKey"`
+	OwnerID        int64  `gorm:"column:owner_id;primaryKey"`
 	ConversationID string `gorm:"column:conversation_id;type:varchar(64);primaryKey"`
 
 	// 2. 会话类型
@@ -50,7 +50,7 @@ func (Conversation) TableName() string {
 
 // 多设备支持
 type DeviceCheckpoint struct {
-	UserID         string `gorm:"primaryKey"`
+	UserID         int64  `gorm:"primaryKey"`
 	DeviceID       string `gorm:"primaryKey"` // 重点：区分 iPhone, Windows, Android
 	ConversationID string `gorm:"primaryKey"` // 如果是Timeline模式，这里不需要ConvID，只需要Seq
 
@@ -70,7 +70,7 @@ type Message struct {
 	Seq            int64  `gorm:"column:seq;index:idx_conv_seq,priority:2;not null"` // 联合唯一索引的核心，群内递增
 
 	// 3. 消息本体
-	SenderID    string `gorm:"column:sender_id;type:varchar(64);not null"`
+	SenderID    int64  `gorm:"column:sender_id;not null"`
 	ClientMsgID string `gorm:"column:client_msg_id;type:varchar(64);index"` // 用于去重
 	MsgType     int32  `gorm:"column:msg_type;not null"`                    // 1=文本, 2=图片...
 	Content     string `gorm:"column:content;type:longtext"`                // 完整内容(JSON)
@@ -87,8 +87,8 @@ type Message struct {
 	// 	SenderNickname   string `gorm:"column:sender_nickname;type:varchar(128)"`
 	// 	SenderAvatarURL  string `gorm:"column:sender_avatar_url;type:varchar(255)"`
 
-	ConvType int32  `gorm:"column:conv_type;not null"`
-	TargetID string `gorm:"column:target_id;type:varchar(64);not null"`
+	ConvType int32 `gorm:"column:conv_type;not null"`
+	TargetID int64 `gorm:"column:target_id;not null"`
 
 	// 分库分表策略：通常按 ConversationID 取模分表
 }
@@ -108,8 +108,8 @@ func (SeqUser) TableName() string {
 
 type UserTimeline struct {
 	// 1. 联合主键 (聚簇索引)：查询 WHERE owner_id=? AND seq>?
-	OwnerID string `gorm:"column:owner_id;type:varchar(64);primaryKey;index:idx_owner_seq,priority:1"`
-	Seq     int64  `gorm:"column:seq;primaryKey;index:idx_owner_seq,priority:2"` // 用户维度的全局Seq
+	OwnerID int64 `gorm:"column:owner_id;primaryKey;index:idx_owner_seq,priority:1"`
+	Seq     int64 `gorm:"column:seq;primaryKey;index:idx_owner_seq,priority:2"` // 用户维度的全局Seq
 
 	// 2. 来源定位
 	ConversationID string `gorm:"column:conversation_id;type:varchar(64);not null"`
@@ -118,7 +118,7 @@ type UserTimeline struct {
 
 	// 3. 列表页快照 (List View)
 	MsgType  int32  `gorm:"column:msg_type;not null"`
-	SenderID string `gorm:"column:sender_id;type:varchar(64)"`
+	SenderID int64  `gorm:"column:sender_id"`
 	Snapshot string `gorm:"column:snapshot;type:varchar(1000)"` // 摘要："[图片]", "你好..."
 
 	// 4. 时间与状态
@@ -136,7 +136,7 @@ type MsgRevoke struct {
 	ID       uint   `gorm:"primaryKey;autoIncrement;column:id"`
 	MsgID    string `gorm:"column:msg_id;type:varchar(128);index"`
 	Role     int32  `gorm:"column:role"`
-	UserID   string `gorm:"column:user_id;type:varchar(64);index"`
+	UserID   int64  `gorm:"column:user_id;index"`
 	Nickname string `gorm:"column:nickname;type:varchar(128)"`
 	Time     int64  `gorm:"column:time;index"`
 }

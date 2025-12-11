@@ -4,6 +4,7 @@ import (
 	"backend/internal/api/apiresp"
 	"backend/internal/api/apiresp/errs"
 	"backend/internal/service"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -23,7 +24,7 @@ func (a *GroupApi) CreateGroup(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.CreatorUserID = c.GetString("user_id")
+	req.CreatorUserID = c.GetInt64("user_id")
 	groupID, err := a.s.CreateGroup(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -63,7 +64,7 @@ func (a *GroupApi) JoinGroup(c *gin.Context) {
 		return
 	}
 	req.GroupID = c.Param("id")
-	req.UserID = c.GetString("user_id")
+	req.UserID = c.GetInt64("user_id")
 	joined, err := a.s.JoinGroup(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -83,8 +84,14 @@ func (a *GroupApi) QuitGroup(c *gin.Context) {
 		return
 	}
 	req.GroupID = c.Param("id")
-	req.UserID = c.Param("userID")
-	req.OperatorUserID = c.GetString("user_id")
+	userIDStr := c.Param("userID")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	req.UserID = userID
+	req.OperatorUserID = c.GetInt64("user_id")
 	if err := a.s.QuitGroup(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -99,7 +106,7 @@ func (a *GroupApi) InviteUserToGroup(c *gin.Context) {
 		return
 	}
 	req.GroupID = c.Param("id")
-	req.InviterUserID = c.GetString("user_id")
+	req.InviterUserID = c.GetInt64("user_id")
 	joined, err := a.s.InviteUserToGroup(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -119,8 +126,14 @@ func (a *GroupApi) KickGroupMember(c *gin.Context) {
 		return
 	}
 	req.GroupID = c.Param("id")
-	req.TargetUserID = c.Param("userID")
-	req.OperatorUserID = c.GetString("user_id")
+	targetUserIDStr := c.Param("userID")
+	targetUserID, err := strconv.ParseInt(targetUserIDStr, 10, 64)
+	if err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	req.TargetUserID = targetUserID
+	req.OperatorUserID = c.GetInt64("user_id")
 	if err := a.s.KickGroupMember(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -135,7 +148,7 @@ func (a *GroupApi) DismissGroup(c *gin.Context) {
 		return
 	}
 	req.GroupID = c.Param("id")
-	req.OperatorUserID = c.GetString("user_id")
+	req.OperatorUserID = c.GetInt64("user_id")
 	if err := a.s.DismissGroup(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -150,7 +163,7 @@ func (a *GroupApi) SetGroupInfo(c *gin.Context) {
 		return
 	}
 	req.GroupID = c.Param("id")
-	req.OperatorUserID = c.GetString("user_id")
+	req.OperatorUserID = c.GetInt64("user_id")
 	if err := a.s.SetGroupInfo(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -165,8 +178,14 @@ func (a *GroupApi) SetGroupMemberInfo(c *gin.Context) {
 		return
 	}
 	req.GroupID = c.Param("id")
-	req.UserID = c.Param("userID")
-	req.OperatorUserID = c.GetString("user_id")
+	userIDStr := c.Param("userID")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	req.UserID = userID
+	req.OperatorUserID = c.GetInt64("user_id")
 	if err := a.s.SetGroupMemberInfo(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
 		return

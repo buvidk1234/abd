@@ -6,7 +6,6 @@ import (
 	"backend/internal/model"
 	"backend/pkg/util"
 	"context"
-	"strconv"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -79,7 +78,7 @@ func (u *UserService) UserRegister(ctx context.Context, req UserRegisterReq) (in
 type UpdateUserInfoReq struct {
 	Nickname  string  `json:"nickname"`
 	AvatarURL string  `json:"avatar_url"`
-	Gender    int32   `json:"gender,string"`
+	Gender    int32   `json:"gender"`
 	Signature string  `json:"signature"`
 	Birth     *string `json:"birth"`
 	Phone     string  `json:"phone"`
@@ -88,7 +87,7 @@ type UpdateUserInfoReq struct {
 }
 
 // UpdateUserInfo
-func (u *UserService) UpdateUserInfo(ctx context.Context, req UpdateUserInfoReq, userId string) error {
+func (u *UserService) UpdateUserInfo(ctx context.Context, req UpdateUserInfoReq, userId int64) error {
 	var user model.User
 	if err := u.db.WithContext(ctx).First(&user, "user_id = ?", userId).Error; err != nil {
 		return err
@@ -124,9 +123,9 @@ func (u *UserService) UpdateUserInfo(ctx context.Context, req UpdateUserInfoReq,
 	return u.db.WithContext(ctx).Save(&user).Error
 }
 
-func (u *UserService) GetUsersPublicInfo(ctx context.Context, userId string) (dto.UserInfo, error) {
+func (u *UserService) GetUsersPublicInfo(ctx context.Context, userId int64) (dto.UserInfo, error) {
 	var user = model.User{}
-	if err := u.db.WithContext(ctx).First(&user, "user_id is ?", userId).Error; err != nil {
+	if err := u.db.WithContext(ctx).First(&user, "user_id = ?", userId).Error; err != nil {
 		return dto.UserInfo{}, err
 	}
 	return dto.ConvertToUserInfo(user), nil
@@ -148,7 +147,7 @@ func (u *UserService) UserLogin(ctx context.Context, req UserLoginReq) (string, 
 	if bcrypt.CompareHashAndPassword(byteHashedPassword, bytePassword) != nil {
 		return "", errs.ErrUserPasswordWrong
 	}
-	token, err := util.GenerateToken(strconv.FormatInt(user.UserID, 10))
+	token, err := util.GenerateToken(user.UserID)
 	if err != nil {
 		return "", err
 	}

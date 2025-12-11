@@ -22,7 +22,7 @@ func TestWsHandler_RegisterClient(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(ws.wsHandler))
 	defer srv.Close()
 
-	token, _ := util.GenerateToken("123")
+	token, _ := util.GenerateToken(123)
 	// build ws url from httptest server url
 	u := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws?platformID=3&token=" + token
 
@@ -73,7 +73,7 @@ func TestWsServer_Run_RegisterAndShutdown(t *testing.T) {
 	// allow server to start
 	time.Sleep(100 * time.Millisecond)
 
-	token, _ := util.GenerateToken("123")
+	token, _ := util.GenerateToken(123)
 
 	u := "ws://127.0.0.1:" + fmt.Sprintf("%d", port) + "/ws?platformID=7&token=" + token
 	d := websocket.Dialer{}

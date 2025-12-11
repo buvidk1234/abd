@@ -40,7 +40,7 @@ func (a *UserApi) UpdateUserInfo(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	err := a.userService.UpdateUserInfo(c.Request.Context(), req, c.GetString("user_id"))
+	err := a.userService.UpdateUserInfo(c.Request.Context(), req, c.GetInt64("user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -49,7 +49,7 @@ func (a *UserApi) UpdateUserInfo(c *gin.Context) {
 }
 
 func (a *UserApi) GetUsersPublicInfo(c *gin.Context) {
-	userInfo, err := a.userService.GetUsersPublicInfo(c.Request.Context(), c.GetString("user_id"))
+	userInfo, err := a.userService.GetUsersPublicInfo(c.Request.Context(), c.GetInt64("user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return

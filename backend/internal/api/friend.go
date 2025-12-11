@@ -4,6 +4,7 @@ import (
 	"backend/internal/api/apiresp"
 	"backend/internal/api/apiresp/errs"
 	"backend/internal/service"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +24,7 @@ func (f *FriendApi) ApplyToAddFriend(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
+	req.FromUserID = c.GetInt64("user_id")
 	err := f.friendService.ApplyToAddFriend(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -38,6 +40,7 @@ func (f *FriendApi) RespondFriendApply(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
+	req.HandlerUserID = c.GetInt64("user_id")
 	err := f.friendService.RespondFriendApply(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -53,7 +56,7 @@ func (f *FriendApi) GetFriendList(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	resp, err := f.friendService.GetPaginationFriends(c.Request.Context(), req, c.GetString("user_id"))
+	resp, err := f.friendService.GetPaginationFriends(c.Request.Context(), req, c.GetInt64("user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -63,8 +66,13 @@ func (f *FriendApi) GetFriendList(c *gin.Context) {
 
 // 获取指定好友信息
 func (f *FriendApi) GetSpecifiedFriendsInfo(c *gin.Context) {
-	friendUserID := c.Param("friendId")
-	friendInfo, err := f.friendService.GetSpecifiedFriendInfo(c.Request.Context(), c.GetString("user_id"), friendUserID)
+	friendUserIDStr := c.Param("friendId")
+	friendUserID, err := strconv.ParseInt(friendUserIDStr, 10, 64)
+	if err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	friendInfo, err := f.friendService.GetSpecifiedFriendInfo(c.Request.Context(), c.GetInt64("user_id"), friendUserID)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -74,8 +82,13 @@ func (f *FriendApi) GetSpecifiedFriendsInfo(c *gin.Context) {
 
 // 删除好友
 func (f *FriendApi) DeleteFriend(c *gin.Context) {
-	friendUserID := c.Param("friendId")
-	err := f.friendService.DeleteFriend(c.Request.Context(), c.GetString("user_id"), friendUserID)
+	friendUserIDStr := c.Param("friendId")
+	friendUserID, err := strconv.ParseInt(friendUserIDStr, 10, 64)
+	if err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	err = f.friendService.DeleteFriend(c.Request.Context(), c.GetInt64("user_id"), friendUserID)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -90,6 +103,7 @@ func (f *FriendApi) GetFriendApplyList(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
+	req.ToUserID = c.GetInt64("user_id")
 	resp, err := f.friendService.GetPaginationFriendApplyList(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -105,6 +119,7 @@ func (f *FriendApi) GetSelfApplyList(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
+	req.FromUserID = c.GetInt64("user_id")
 	resp, err := f.friendService.GetPaginationSelfApplyList(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -120,7 +135,7 @@ func (f *FriendApi) AddBlack(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.OwnerUserID = c.GetString("user_id")
+	req.OwnerUserID = c.GetInt64("user_id")
 	req.OperatorUserID = req.OwnerUserID
 	if err := f.friendService.AddBlack(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
@@ -136,7 +151,7 @@ func (f *FriendApi) RemoveBlack(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.OwnerUserID = c.GetString("user_id")
+	req.OwnerUserID = c.GetInt64("user_id")
 	if err := f.friendService.RemoveBlack(c.Request.Context(), req); err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -151,7 +166,7 @@ func (f *FriendApi) GetPaginationBlacks(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.OwnerUserID = c.GetString("user_id")
+	req.OwnerUserID = c.GetInt64("user_id")
 	resp, err := f.friendService.GetPaginationBlacks(c.Request.Context(), req)
 	if err != nil {
 		apiresp.GinError(c, err)

@@ -4,7 +4,6 @@ import (
 	"backend/internal/dto"
 	"backend/internal/model"
 	"context"
-	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -19,7 +18,7 @@ func NewFriendService(db *gorm.DB) *FriendService {
 
 // 申请添加好友
 type ApplyToAddFriendReq struct {
-	FromUserID int64  `json:"fromUserID,string" binding:"required"`
+	FromUserID int64
 	ToUserID   int64  `json:"toUserID,string" binding:"required"`
 	ReqMsg     string `json:"message"`
 }
@@ -34,9 +33,9 @@ func (s *FriendService) ApplyToAddFriend(ctx context.Context, req ApplyToAddFrie
 }
 
 type RespondFriendApplyReq struct {
-	ID            int64  `json:"id,string" binding:"required"`
-	HandlerUserID int64  `json:"handlerUserID,string" binding:"required"`
-	HandleResult  int32  `json:"handleResult,string" binding:"required"`
+	ID            int64 `json:"id,string" binding:"required"`
+	HandlerUserID int64
+	HandleResult  int32  `json:"handleResult" binding:"required"`
 	HandleMsg     string `json:"handleMsg"`
 }
 
@@ -72,8 +71,8 @@ func (s *FriendService) RespondFriendApply(ctx context.Context, req RespondFrien
 }
 
 type GetPaginationFriendsReq struct {
-	Page     int `json:"page,default=1"`
-	PageSize int `json:"pageSize,default=10"`
+	Page     int `json:"page"`
+	PageSize int `json:"pageSize"`
 }
 
 type GetFriendListResp struct {
@@ -84,7 +83,7 @@ type GetFriendListResp struct {
 }
 
 // 获取好友列表
-func (s *FriendService) GetPaginationFriends(ctx context.Context, params GetPaginationFriendsReq, userId string) (GetFriendListResp, error) {
+func (s *FriendService) GetPaginationFriends(ctx context.Context, params GetPaginationFriendsReq, userId int64) (GetFriendListResp, error) {
 	// 默认值处理
 	if params.Page <= 0 {
 		params.Page = 1
@@ -130,7 +129,7 @@ func (s *FriendService) GetPaginationFriends(ctx context.Context, params GetPagi
 }
 
 // 获取指定好友信息
-func (s *FriendService) GetSpecifiedFriendInfo(ctx context.Context, ownerUserID, friendUserID string) (dto.FriendInfo, error) {
+func (s *FriendService) GetSpecifiedFriendInfo(ctx context.Context, ownerUserID, friendUserID int64) (dto.FriendInfo, error) {
 	var f model.Friend
 	if err := s.db.WithContext(ctx).Where("owner_user_id = ? AND friend_user_id = ?", ownerUserID, friendUserID).First(&f).Error; err != nil {
 		return dto.FriendInfo{}, err
@@ -143,12 +142,12 @@ func (s *FriendService) GetSpecifiedFriendInfo(ctx context.Context, ownerUserID,
 }
 
 type DeleteFriendReq struct {
-	OwnerUserID  string `json:"ownerUserID" binding:"required"`
-	FriendUserID string `json:"friendUserID" binding:"required"`
+	OwnerUserID  int64
+	FriendUserID int64 `json:"friendUserID,string" binding:"required"`
 }
 
 // 删除好友，TODO：未测试
-func (s *FriendService) DeleteFriend(ctx context.Context, ownerUserID string, friendUserID string) error {
+func (s *FriendService) DeleteFriend(ctx context.Context, ownerUserID int64, friendUserID int64) error {
 	if err := s.db.WithContext(ctx).Where("owner_user_id = ? AND friend_user_id = ?", ownerUserID, friendUserID).Delete(&model.Friend{}).Error; err != nil {
 		return err
 	}
@@ -159,9 +158,9 @@ func (s *FriendService) DeleteFriend(ctx context.Context, ownerUserID string, fr
 }
 
 type GetPaginationFriendApplyListReq struct {
-	Page     int    `json:"page"`
-	PageSize int    `json:"pageSize"`
-	ToUserID string `json:"toUserID" binding:"required"`
+	Page     int `json:"page"`
+	PageSize int `json:"pageSize"`
+	ToUserID int64
 }
 type GetPaginationFriendApplyListResp struct {
 	List     []dto.FriendRequestInfo `json:"list"`
@@ -222,9 +221,9 @@ type GetSelfFriendApplyListResp struct {
 }
 
 type GetPaginationSelfFriendApplyListReq struct {
-	Page       int    `json:"page"`
-	PageSize   int    `json:"pageSize"`
-	FromUserID string `json:"fromUserID" binding:"required"`
+	Page       int `json:"page"`
+	PageSize   int `json:"pageSize"`
+	FromUserID int64
 }
 
 // 获取自己发出的好友申请列表
@@ -273,42 +272,35 @@ func (s *FriendService) GetPaginationSelfApplyList(ctx context.Context, req GetP
 // TODO: Black
 // 添加黑名单
 type AddBlackReq struct {
-	OwnerUserID    string `json:"ownerUserID"`
-	BlockUserID    string `json:"blockUserID" binding:"required"`
-	OperatorUserID string `json:"operatorUserID"`
-	AddSource      int32  `json:"addSource,string"`
+	OwnerUserID    int64
+	BlockUserID    int64 `json:"blockUserID,string" binding:"required"`
+	OperatorUserID int64 `json:"operatorUserID,string"`
+	AddSource      int32 `json:"addSource"`
 }
 
 func (s *FriendService) AddBlack(ctx context.Context, req AddBlackReq) error {
-	ownerID, err := strconv.ParseInt(req.OwnerUserID, 10, 64)
-	if err != nil {
-		return err
-	}
-	blockID, err := strconv.ParseInt(req.BlockUserID, 10, 64)
-	if err != nil {
-		return err
-	}
+
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var existing int64
-		if err := tx.Model(&model.Black{}).Where("owner_user_id = ? AND block_user_id = ?", ownerID, blockID).Count(&existing).Error; err != nil {
+		if err := tx.Model(&model.Black{}).Where("owner_user_id = ? AND block_user_id = ?", req.OwnerUserID, req.BlockUserID).Count(&existing).Error; err != nil {
 			return err
 		}
 		if existing == 0 {
 			black := model.Black{
-				OwnerUserID:    ownerID,
-				BlockUserID:    blockID,
+				OwnerUserID:    req.OwnerUserID,
+				BlockUserID:    req.BlockUserID,
 				AddSource:      req.AddSource,
-				OperatorUserID: ownerID,
+				OperatorUserID: req.OperatorUserID,
 			}
 			if err := tx.Create(&black).Error; err != nil {
 				return err
 			}
 		}
 		// 同时移除好友关系，避免黑名单和好友并存
-		if err := tx.Where("owner_user_id = ? AND friend_user_id = ?", ownerID, blockID).Delete(&model.Friend{}).Error; err != nil {
+		if err := tx.Where("owner_user_id = ? AND friend_user_id = ?", req.OwnerUserID, req.BlockUserID).Delete(&model.Friend{}).Error; err != nil {
 			return err
 		}
-		if err := tx.Where("owner_user_id = ? AND friend_user_id = ?", blockID, ownerID).Delete(&model.Friend{}).Error; err != nil {
+		if err := tx.Where("owner_user_id = ? AND friend_user_id = ?", req.BlockUserID, req.OwnerUserID).Delete(&model.Friend{}).Error; err != nil {
 			return err
 		}
 		return nil
@@ -317,27 +309,19 @@ func (s *FriendService) AddBlack(ctx context.Context, req AddBlackReq) error {
 
 // 移除黑名单
 type RemoveBlackReq struct {
-	OwnerUserID string `json:"ownerUserID"`
-	BlockUserID string `json:"blockUserID" binding:"required"`
+	OwnerUserID int64
+	BlockUserID int64 `json:"blockUserID,string" binding:"required"`
 }
 
 func (s *FriendService) RemoveBlack(ctx context.Context, req RemoveBlackReq) error {
-	ownerID, err := strconv.ParseInt(req.OwnerUserID, 10, 64)
-	if err != nil {
-		return err
-	}
-	blockID, err := strconv.ParseInt(req.BlockUserID, 10, 64)
-	if err != nil {
-		return err
-	}
-	return s.db.WithContext(ctx).Where("owner_user_id = ? AND block_user_id = ?", ownerID, blockID).Delete(&model.Black{}).Error
+	return s.db.WithContext(ctx).Where("owner_user_id = ? AND block_user_id = ?", req.OwnerUserID, req.BlockUserID).Delete(&model.Black{}).Error
 }
 
 // 获取黑名单列表
 type GetPaginationBlacksReq struct {
-	Page        int    `form:"page,default=1"`
-	PageSize    int    `form:"pageSize,default=10"`
-	OwnerUserID string `form:"ownerUserID"`
+	Page        int `form:"page,default=1"`
+	PageSize    int `form:"pageSize,default=10"`
+	OwnerUserID int64
 }
 type GetPaginationBlacksResp struct {
 	Blacks   []dto.BlackInfo `json:"blacks"`
