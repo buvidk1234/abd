@@ -22,7 +22,7 @@ func init() {
 
 type User struct {
 	// 基本信息
-	UserID       int64  `gorm:"column:user_id;primaryKey;autoIncrement" json:"userID"`
+	UserID       int64  `gorm:"column:user_id;primaryKey;autoIncrement" json:"userID,string"`
 	Username     string `gorm:"column:username;type:varchar(32);uniqueIndex;not null;comment:用户名" json:"username"`
 	PasswordHash string `gorm:"column:password;type:varchar(255);not null;comment:加密后的密码" json:"-"`
 	Phone        string `gorm:"column:phone;type:varchar(20);uniqueIndex;default:null;comment:手机号" json:"phone,omitempty"`

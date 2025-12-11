@@ -8,7 +8,7 @@ import (
 // UserInfo
 type UserInfo struct {
 	Username  string `json:"username"`
-	UserID    int64  `json:"user_id"`
+	UserID    int64  `json:"user_id,string"`
 	Nickname  string `json:"nickname"`
 	AvatarURL string `json:"avatar_url"`
 	Gender    int32  `json:"gender,string"`
@@ -29,7 +29,7 @@ func ConvertToUserInfo(user model.User) UserInfo {
 // Friend
 
 type FriendRequestInfo struct {
-	ID           int64     `json:"id"`
+	ID           int64     `json:"id,string"`
 	FromUser     UserInfo  `json:"fromUser"`
 	ToUser       UserInfo  `json:"toUser"`
 	HandleResult int32     `json:"handleResult"`
@@ -55,7 +55,7 @@ func ConvertToFriendRequestInfo(fr model.FriendRequest, fromUser model.User, toU
 }
 
 type FriendInfo struct {
-	OwnerUserID int64    `json:"ownerUserID"`
+	OwnerUserID int64    `json:"ownerUserID,string"`
 	Remark      string   `json:"remark"`
 	CreatedAt   int64    `json:"createdAt"`
 	FriendUser  UserInfo `json:"friendUser"`
@@ -75,7 +75,7 @@ func ConvertToFriendInfo(friend model.Friend, user model.User) FriendInfo {
 }
 
 type BlackInfo struct {
-	OwnerUserID int64    `json:"ownerUserID"`
+	OwnerUserID int64    `json:"ownerUserID,string"`
 	BlockUser   UserInfo `json:"blockUser"`
 	AddSource   int32    `json:"addSource"`
 	CreatedAt   int64    `json:"createdAt"`
@@ -97,7 +97,7 @@ type GroupInfo struct {
 	CreatedAt         time.Time `json:"createdAt"`
 	Ex                string    `json:"ex"`
 	Status            int32     `json:"status"`
-	CreatorUserID     int64     `json:"creatorUserID"`
+	CreatorUserID     int64     `json:"creatorUserID,string"`
 	GroupType         int32     `json:"groupType"`
 	NeedVerification  int32     `json:"needVerification"`
 	LookMemberInfo    int32     `json:"lookMemberInfo"`
@@ -123,7 +123,7 @@ func ConvertToGroupInfo(group model.Group) GroupInfo {
 type GroupMemberInfo struct {
 	ID        uint      `json:"id"`
 	GroupID   string    `json:"groupID"`
-	UserID    int64     `json:"userID"`
+	UserID    int64     `json:"userID,string"`
 	Nickname  string    `json:"nickname"`
 	AvatarURL string    `json:"avatarURL"`
 	RoleLevel int32     `json:"roleLevel"`

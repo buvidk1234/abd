@@ -63,32 +63,32 @@ func (DeviceCheckpoint) TableName() string {
 
 type Message struct {
 	// 1. 核心ID：使用雪花算法(Snowflake)，不要用自增ID
-	ID int64 `gorm:"column:id;primaryKey;autoIncrement:false"`
+	ID int64 `gorm:"column:id;primaryKey;autoIncrement:false" json:"id,string"`
 
 	// 2. 归属与排序
-	ConversationID string `gorm:"column:conversation_id;type:varchar(64);index:idx_conv_seq,priority:1;not null"`
-	Seq            int64  `gorm:"column:seq;index:idx_conv_seq,priority:2;not null"` // 联合唯一索引的核心，群内递增
+	ConversationID string `gorm:"column:conversation_id;type:varchar(64);index:idx_conv_seq,priority:1;not null" json:"conversation_id"`
+	Seq            int64  `gorm:"column:seq;index:idx_conv_seq,priority:2;not null" json:"seq"` // 联合唯一索引的核心，群内递增
 
 	// 3. 消息本体
-	SenderID    int64  `gorm:"column:sender_id;not null"`
-	ClientMsgID string `gorm:"column:client_msg_id;type:varchar(64);index"` // 用于去重
-	MsgType     int32  `gorm:"column:msg_type;not null"`                    // 1=文本, 2=图片...
-	Content     string `gorm:"column:content;type:longtext"`                // 完整内容(JSON)
+	SenderID    int64  `gorm:"column:sender_id;not null" json:"sender_id,string"`
+	ClientMsgID string `gorm:"column:client_msg_id;type:varchar(64);index" json:"client_msg_id"` // 用于去重
+	MsgType     int32  `gorm:"column:msg_type;not null" json:"msg_type"`                         // 1=文本, 2=图片...
+	Content     string `gorm:"column:content;type:longtext" json:"content"`                      // 完整内容(JSON)
 
 	// 4. 引用与状态
-	RefMsgID int64 `gorm:"column:ref_msg_id"`       // 引用/回复的消息ID
-	Status   int32 `gorm:"column:status;default:0"` // 0=正常, 1=撤回(撤回详情表),。删除(部分用户不可见有相关表)前端自行维护
+	RefMsgID int64 `gorm:"column:ref_msg_id" json:"ref_msg_id,string"` // 引用/回复的消息ID
+	Status   int32 `gorm:"column:status;default:0" json:"status"`      // 0=正常, 1=撤回(撤回详情表),。删除(部分用户不可见有相关表)前端自行维护
 
 	// 5. 时间
-	SendTime   int64 `gorm:"column:send_time;index;not null"`            // 发送时间戳(ms)
-	CreateTime int64 `gorm:"column:create_time;autoCreateTime;not null"` // 入库时间戳(ms)
+	SendTime   int64 `gorm:"column:send_time;index;not null" json:"send_time"`              // 发送时间戳(ms)
+	CreateTime int64 `gorm:"column:create_time;autoCreateTime;not null" json:"create_time"` // 入库时间戳(ms)
 
 	// 6. 冗余字段
 	// 	SenderNickname   string `gorm:"column:sender_nickname;type:varchar(128)"`
 	// 	SenderAvatarURL  string `gorm:"column:sender_avatar_url;type:varchar(255)"`
 
-	ConvType int32 `gorm:"column:conv_type;not null"`
-	TargetID int64 `gorm:"column:target_id;not null"`
+	ConvType int32 `gorm:"column:conv_type;not null" json:"conv_type"`
+	TargetID int64 `gorm:"column:target_id;not null" json:"target_id,string"`
 
 	// 分库分表策略：通常按 ConversationID 取模分表
 }
