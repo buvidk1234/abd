@@ -36,6 +36,79 @@ func NewSeqConversationCacheRedis(db *gorm.DB, client *redis.Client) *SeqConvers
 	}
 }
 
+func (s *SeqConversationCacheRedis) GetMaxSeqs(ctx context.Context, conversationIDs []string) (map[string]int64, error) {
+	switch len(conversationIDs) {
+	case 0:
+		return map[string]int64{}, nil
+	case 1:
+		return s.getSingleMaxSeq(ctx, conversationIDs[0])
+	}
+	keys := make([]string, 0, len(conversationIDs))
+	keyConversationID := make(map[string]string, len(conversationIDs))
+	for _, conversationID := range conversationIDs {
+		key := cachekey.GetSeqConvKey(conversationID)
+		if _, ok := keyConversationID[key]; ok {
+			continue
+		}
+		keys = append(keys, key)
+		keyConversationID[key] = conversationID
+	}
+	if len(keys) == 1 {
+		return s.getSingleMaxSeq(ctx, conversationIDs[0])
+	}
+
+	seqs := make(map[string]int64, len(conversationIDs))
+	if err := s.batchGetMaxSeq(ctx, keys, keyConversationID, seqs); err != nil {
+		return nil, err
+	}
+
+	return seqs, nil
+}
+
+func (s *SeqConversationCacheRedis) batchGetMaxSeq(ctx context.Context, keys []string, keyConversationID map[string]string, seqs map[string]int64) error {
+	result := make([]*redis.StringCmd, len(keys))
+	pipe := s.client.Pipeline()
+	for i, key := range keys {
+		result[i] = pipe.HGet(ctx, key, "CURR")
+	}
+	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, redis.Nil) {
+		return err
+	}
+	var notFoundKey []string
+	for i, r := range result {
+		req, err := r.Int64()
+		if err == nil {
+			seqs[keyConversationID[keys[i]]] = req
+		} else if errors.Is(err, redis.Nil) {
+			notFoundKey = append(notFoundKey, keys[i])
+		} else {
+			return err
+		}
+	}
+	for _, key := range notFoundKey {
+		conversationID := keyConversationID[key]
+		seq, err := s.getMaxSeq(ctx, conversationID)
+		if err != nil {
+			return err
+		}
+		seqs[conversationID] = seq
+	}
+	return nil
+}
+
+func (s *SeqConversationCacheRedis) getSingleMaxSeq(ctx context.Context, conversationID string) (map[string]int64, error) {
+	seq, err := s.getMaxSeq(ctx, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]int64{conversationID: seq}, nil
+}
+
+// 获取当前最大序列号
+func (s *SeqConversationCacheRedis) getMaxSeq(ctx context.Context, conversationID string) (int64, error) {
+	return s.Malloc(ctx, conversationID, 0)
+}
+
 func (s *SeqConversationCacheRedis) Malloc(ctx context.Context, conversationID string, size int64) (int64, error) {
 	seq, _, err := s.mallocTime(ctx, conversationID, size)
 	return seq, err
