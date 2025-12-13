@@ -2,13 +2,15 @@ package model
 
 type SeqConversation struct {
 	// ID ConversationID就是对象ID (GroupID 或 (UserAID,UserBID))
-	ID string `gorm:"column:id;type:varchar(64);primaryKey"`
+	ID string `gorm:"column:id;type:varchar(64);primaryKey" json:"id"`
 
 	// 序列号类型：1=UserSeq, 2=GroupSeq
-	SeqType int32 `gorm:"column:seq_type;primaryKey"`
+	SeqType int32 `gorm:"column:seq_type;primaryKey" json:"seq_type"`
 
 	// 当前最大值
-	MaxSeq int64 `gorm:"column:max_seq;not null"`
+	MaxSeq int64 `gorm:"column:max_seq;not null" json:"max_seq"`
+	// 当前最小值
+	MinSeq int64 `gorm:"column:min_seq;not null" json:"min_seq"`
 }
 
 func (SeqConversation) TableName() string {
@@ -17,31 +19,32 @@ func (SeqConversation) TableName() string {
 
 type Conversation struct {
 	// 1. 联合主键
-	OwnerID        int64  `gorm:"column:owner_id;primaryKey"`
-	ConversationID string `gorm:"column:conversation_id;type:varchar(64);primaryKey"`
+	OwnerID        int64  `gorm:"column:owner_id;primaryKey" json:"owner_id,string"`
+	ConversationID string `gorm:"column:conversation_id;type:varchar(64);primaryKey" json:"conversation_id"`
 
 	// 2. 会话类型
-	ConvType int32 `gorm:"column:conv_type;not null"` // 1=单聊, 2=群聊
+	ConvType int32 `gorm:"column:conv_type;not null" json:"conv_type"` // 1=单聊, 2=群聊
 
 	// 3. 核心状态控制 (这就是你提到的 Status)
 	// 1=正常, 2=已删除(隐藏), 3=被封禁/异常
-	Status int32 `gorm:"column:status;default:1;index"`
+	Status int32 `gorm:"column:status;default:1;index" json:"status"`
 
 	// 4. 个性化设置
-	UnreadCount int32  `gorm:"column:unread_count;default:0"`
-	IsPinned    bool   `gorm:"column:is_pinned;default:false;index"` // 置顶需索引，方便排序
-	IsMuted     bool   `gorm:"column:is_muted;default:false"`
-	ShowName    string `gorm:"column:show_name;type:varchar(128)"` // 备注名
+	UnreadCount int32  `gorm:"column:unread_count;default:0" json:"unread_count"`
+	IsPinned    bool   `gorm:"column:is_pinned;default:false;index" json:"is_pinned"` // 置顶需索引，方便排序
+	IsMuted     bool   `gorm:"column:is_muted;default:false" json:"is_muted"`
+	ShowName    string `gorm:"column:show_name;type:varchar(128)" json:"show_name"` // 备注名
 
 	// 5. 同步位点 (Checkpoint)
-	MinSeq  int64 `gorm:"column:min_seq"`  // 会话内最小 GroupSeq
-	ReadSeq int64 `gorm:"column:read_seq"` // 已读到的 GroupSeq
-	SyncSeq int64 `gorm:"column:sync_seq"` // 仅用于 Timeline 模式：最后一条同步到的 Timeline Seq,如果用户传的是0，同步最近min(100, SyncSeq-0)条消息。 单设备
+	MinSeq  int64 `gorm:"column:min_seq" json:"min_seq"`   // 会话内最小 GroupSeq
+	MaxSeq  int64 `gorm:"column:max_seq" json:"max_seq"`   // 能检索的最大值
+	ReadSeq int64 `gorm:"column:read_seq" json:"read_seq"` // 已读到的 GroupSeq
+	SyncSeq int64 `gorm:"column:sync_seq" json:"sync_seq"` // 仅用于 Timeline 模式：最后一条同步到的 Timeline Seq,如果用户传的是0，同步最近min(100, SyncSeq-0)条消息。 单设备
 
 	// 6. 冗余显示 (兜底用)
-	LastMsgID       int64  `gorm:"column:last_msg_id"`
-	LastMsgTime     int64  `gorm:"column:last_msg_time;index"` // 用于列表排序
-	LastMsgSnapshot string `gorm:"column:last_msg_snapshot;type:varchar(500)"`
+	LastMsgID       int64  `gorm:"column:last_msg_id" json:"last_msg_id,string"`
+	LastMsgTime     int64  `gorm:"column:last_msg_time;index" json:"last_msg_time"` // 用于列表排序
+	LastMsgSnapshot string `gorm:"column:last_msg_snapshot;type:varchar(500)" json:"last_msg_snapshot"`
 }
 
 func (Conversation) TableName() string {
@@ -50,11 +53,11 @@ func (Conversation) TableName() string {
 
 // 多设备支持
 type DeviceCheckpoint struct {
-	UserID         int64  `gorm:"primaryKey"`
-	DeviceID       string `gorm:"primaryKey"` // 重点：区分 iPhone, Windows, Android
-	ConversationID string `gorm:"primaryKey"` // 如果是Timeline模式，这里不需要ConvID，只需要Seq
+	UserID         int64  `gorm:"primaryKey" json:"user_id,string"`
+	DeviceID       string `gorm:"primaryKey" json:"device_id"`       // 重点：区分 iPhone, Windows, Android
+	ConversationID string `gorm:"primaryKey" json:"conversation_id"` // 如果是Timeline模式，这里不需要ConvID，只需要Seq
 
-	SyncSeq int64 // 这个设备的同步进度
+	SyncSeq int64 `json:"sync_seq"` // 这个设备的同步进度
 }
 
 func (DeviceCheckpoint) TableName() string {
@@ -98,14 +101,19 @@ func (Message) TableName() string {
 }
 
 type SeqUser struct {
-	ID     string `gorm:"column:id;type:varchar(64);primaryKey"`
-	MaxSeq int64  `gorm:"column:max_seq;not null"`
+	UserID         int64  `gorm:"column:user_id;primaryKey" json:"user_id,string"`
+	ConversationID string `gorm:"column:conversation_id;type:varchar(64);primaryKey" json:"conversation_id"`
+
+	MinSeq  int64 `gorm:"column:min_seq;not null" json:"min_seq"`   // 会话内最小 UserSeq
+	ReadSeq int64 `gorm:"column:read_seq;not null" json:"read_seq"` // 已读到的 UserSeq
+	MaxSeq  int64 `gorm:"column:max_seq;not null" json:"max_seq"`   // 当前最大值
 }
 
 func (SeqUser) TableName() string {
 	return "seq_users"
 }
 
+// 用来实现feed流的用户时间线，对于单聊和小群聊不需要,用来实现发帖，朋友圈等功能
 type UserTimeline struct {
 	// 1. 联合主键 (聚簇索引)：查询 WHERE owner_id=? AND seq>?
 	OwnerID int64 `gorm:"column:owner_id;primaryKey;index:idx_owner_seq,priority:1"`

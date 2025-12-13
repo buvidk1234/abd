@@ -36,6 +36,17 @@ func NewSeqConversationCacheRedis(db *gorm.DB, client *redis.Client) *SeqConvers
 	}
 }
 
+func (s *SeqConversationCacheRedis) GetMinSeq(ctx context.Context, conversationID string) (int64, error) {
+	minSeq, err := GetCache(cachekey.GetSeqConvMinSeqKey(conversationID), func() (int64, error) {
+		var seqConv model.SeqConversation
+		if err := s.db.WithContext(ctx).Where("id = ?", conversationID).First(&seqConv).Error; err != nil {
+			return 0, err
+		}
+		return seqConv.MinSeq, nil
+	}, s.minSeqExpireTime)
+	return minSeq, err
+}
+
 func (s *SeqConversationCacheRedis) GetMaxSeqs(ctx context.Context, conversationIDs []string) (map[string]int64, error) {
 	switch len(conversationIDs) {
 	case 0:
@@ -87,7 +98,7 @@ func (s *SeqConversationCacheRedis) batchGetMaxSeq(ctx context.Context, keys []s
 	}
 	for _, key := range notFoundKey {
 		conversationID := keyConversationID[key]
-		seq, err := s.getMaxSeq(ctx, conversationID)
+		seq, err := s.GetMaxSeq(ctx, conversationID)
 		if err != nil {
 			return err
 		}
@@ -97,7 +108,7 @@ func (s *SeqConversationCacheRedis) batchGetMaxSeq(ctx context.Context, keys []s
 }
 
 func (s *SeqConversationCacheRedis) getSingleMaxSeq(ctx context.Context, conversationID string) (map[string]int64, error) {
-	seq, err := s.getMaxSeq(ctx, conversationID)
+	seq, err := s.GetMaxSeq(ctx, conversationID)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +116,7 @@ func (s *SeqConversationCacheRedis) getSingleMaxSeq(ctx context.Context, convers
 }
 
 // 获取当前最大序列号
-func (s *SeqConversationCacheRedis) getMaxSeq(ctx context.Context, conversationID string) (int64, error) {
+func (s *SeqConversationCacheRedis) GetMaxSeq(ctx context.Context, conversationID string) (int64, error) {
 	return s.Malloc(ctx, conversationID, 0)
 }
 
