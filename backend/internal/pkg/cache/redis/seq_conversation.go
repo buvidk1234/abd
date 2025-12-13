@@ -4,6 +4,7 @@ import (
 	"backend/internal/pkg/cache/cachekey"
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,6 +46,100 @@ func (s *SeqConversationCacheRedis) GetMinSeq(ctx context.Context, conversationI
 		return seqConv.MinSeq, nil
 	}, s.minSeqExpireTime)
 	return minSeq, err
+}
+
+type SeqTime struct {
+	Seq  int64
+	Time int64
+}
+
+func (s *SeqConversationCacheRedis) GetMaxSeqsWithTime(ctx context.Context, conversationIDs []string) (map[string]SeqTime, error) {
+	switch len(conversationIDs) {
+	case 0:
+		return map[string]SeqTime{}, nil
+	case 1:
+		return s.getSingleMaxSeqWithTime(ctx, conversationIDs[0])
+	}
+	keys := make([]string, 0, len(conversationIDs))
+	keyConversationID := make(map[string]string, len(conversationIDs))
+	for _, conversationID := range conversationIDs {
+		key := cachekey.GetSeqConvKey(conversationID)
+		if _, ok := keyConversationID[key]; ok {
+			continue
+		}
+		keys = append(keys, key)
+		keyConversationID[key] = conversationID
+	}
+	if len(keys) == 1 {
+		return s.getSingleMaxSeqWithTime(ctx, conversationIDs[0])
+	}
+
+	seqs := make(map[string]SeqTime, len(conversationIDs))
+	if err := s.batchGetMaxSeqWithTime(ctx, keys, keyConversationID, seqs); err != nil {
+		return nil, err
+	}
+	return seqs, nil
+}
+
+func (s *SeqConversationCacheRedis) batchGetMaxSeqWithTime(ctx context.Context, keys []string, keyConversationID map[string]string, seqs map[string]SeqTime) error {
+	result := make([]*redis.SliceCmd, len(keys))
+	pipe := s.client.Pipeline()
+	for i, key := range keys {
+		result[i] = pipe.HMGet(ctx, key, "CURR", "TIME")
+	}
+	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, redis.Nil) {
+		return err
+	}
+	var notFoundKey []string
+	for i, r := range result {
+		values, err := r.Result()
+		if err == nil {
+			if len(values) != 2 || values[0] == nil || values[1] == nil {
+				notFoundKey = append(notFoundKey, keys[i])
+				continue
+			}
+			currSeq, ok1 := values[0].(string)
+			millStr, ok2 := values[1].(string)
+			if !ok1 || !ok2 {
+				notFoundKey = append(notFoundKey, keys[i])
+				continue
+			}
+			seqValue, err1 := strconv.ParseInt(currSeq, 10, 64)
+			millValue, err2 := strconv.ParseInt(millStr, 10, 64)
+			if err1 != nil || err2 != nil {
+				notFoundKey = append(notFoundKey, keys[i])
+				continue
+			}
+			seqs[keyConversationID[keys[i]]] = SeqTime{Seq: seqValue, Time: millValue}
+		} else if errors.Is(err, redis.Nil) {
+			notFoundKey = append(notFoundKey, keys[i])
+		} else {
+			return err
+		}
+	}
+	for _, key := range notFoundKey {
+		conversationID := keyConversationID[key]
+		seq, err := s.GetMaxSeqWithTime(ctx, conversationID)
+		if err != nil {
+			return err
+		}
+		seqs[conversationID] = seq
+	}
+	return nil
+}
+func (s *SeqConversationCacheRedis) getSingleMaxSeqWithTime(ctx context.Context, conversationID string) (map[string]SeqTime, error) {
+	seq, err := s.GetMaxSeqWithTime(ctx, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]SeqTime{conversationID: seq}, nil
+}
+func (s *SeqConversationCacheRedis) GetMaxSeqWithTime(ctx context.Context, conversationID string) (SeqTime, error) {
+	seq, mill, err := s.mallocTime(ctx, conversationID, 0)
+	if err != nil {
+		return SeqTime{}, err
+	}
+	return SeqTime{Seq: seq, Time: mill}, nil
 }
 
 func (s *SeqConversationCacheRedis) GetMaxSeqs(ctx context.Context, conversationIDs []string) (map[string]int64, error) {

@@ -56,11 +56,19 @@ type Resp struct {
 	Data          any    `json:"data"`
 }
 
+//	type MessageHandler interface {
+//		SendMessage(ctx context.Context, data *Req) (any, error)
+//		PullSpecifiedConv(ctx context.Context, data *Req) (any, error)
+//		PullConvList(ctx context.Context, data *Req) (any, error)
+//		// UserLogout(ctx context.Context, data *Req) ([]byte, error)
+//	}
 type MessageHandler interface {
-	SendMessage(ctx context.Context, data *Req) (any, error)
-	PullSpecifiedConv(ctx context.Context, data *Req) (any, error)
-	PullConvList(ctx context.Context, data *Req) (any, error)
-	// UserLogout(ctx context.Context, data *Req) ([]byte, error)
+	GetSeq(ctx context.Context, data *Req) ([]byte, error)
+	SendMessage(ctx context.Context, data *Req) ([]byte, error)
+	PullMessageBySeqList(ctx context.Context, data *Req) ([]byte, error)
+	GetConversationsHasReadAndMaxSeq(ctx context.Context, data *Req) ([]byte, error)
+	GetSeqMessage(ctx context.Context, data *Req) ([]byte, error)
+	GetLastMessage(ctx context.Context, data *Req) ([]byte, error)
 }
 
 var _ MessageHandler = (*ServiceHandler)(nil)
@@ -78,7 +86,20 @@ func NewServiceHandler(messageService *service.MessageService, producer sarama.S
 	}
 }
 
-func (s *ServiceHandler) SendMessage(ctx context.Context, data *Req) (any, error) {
+func (s *ServiceHandler) GetSeq(ctx context.Context, data *Req) ([]byte, error) {
+	var getSeqReq service.GetMaxSeqReq
+	if err := json.Unmarshal(data.Data, &getSeqReq); err != nil {
+		return nil, err
+	}
+	resp, err := s.messageService.GetMaxSeq(ctx, getSeqReq)
+	if err != nil {
+		return nil, err
+	}
+	r, _ := json.Marshal(resp)
+	return r, nil
+}
+
+func (s *ServiceHandler) SendMessage(ctx context.Context, data *Req) ([]byte, error) {
 	// encode
 	log.Print("SendMessage")
 	// var sendMsgReq service.SendMessageReq
@@ -102,6 +123,56 @@ func (s *ServiceHandler) SendMessage(ctx context.Context, data *Req) (any, error
 	}
 	log.Printf("message sent to partition=%d offset=%d", partition, offset)
 	return nil, nil
+}
+func (s *ServiceHandler) PullMessageBySeqList(ctx context.Context, data *Req) ([]byte, error) {
+	var pullReq service.PullMessageBySeqsReq
+	if err := json.Unmarshal(data.Data, &pullReq); err != nil {
+		return nil, err
+	}
+	resp, err := s.messageService.PullMessageBySeqs(ctx, pullReq)
+	if err != nil {
+		return nil, err
+	}
+	r, _ := json.Marshal(resp)
+	return r, nil
+}
+
+func (s *ServiceHandler) GetConversationsHasReadAndMaxSeq(ctx context.Context, data *Req) ([]byte, error) {
+	var getReq service.GetConversationsHasReadAndMaxSeqReq
+	if err := json.Unmarshal(data.Data, &getReq); err != nil {
+		return nil, err
+	}
+	resp, err := s.messageService.GetConversationsHasReadAndMaxSeq(ctx, getReq)
+	if err != nil {
+		return nil, err
+	}
+	r, _ := json.Marshal(resp)
+	return r, nil
+}
+func (s *ServiceHandler) GetLastMessage(ctx context.Context, data *Req) ([]byte, error) {
+	var getLastMsgReq service.GetLastMessageReq
+	if err := json.Unmarshal(data.Data, &getLastMsgReq); err != nil {
+		return nil, err
+	}
+	resp, err := s.messageService.GetLastMessage(ctx, getLastMsgReq)
+	if err != nil {
+		return nil, err
+	}
+	r, _ := json.Marshal(resp)
+	return r, nil
+}
+
+func (s *ServiceHandler) GetSeqMessage(ctx context.Context, data *Req) ([]byte, error) {
+	var getSeqMsgReq service.GetSeqMessageReq
+	if err := json.Unmarshal(data.Data, &getSeqMsgReq); err != nil {
+		return nil, err
+	}
+	resp, err := s.messageService.GetSeqMessage(ctx, getSeqMsgReq)
+	if err != nil {
+		return nil, err
+	}
+	r, _ := json.Marshal(resp)
+	return r, nil
 }
 
 func (s *ServiceHandler) PullSpecifiedConv(ctx context.Context, data *Req) (any, error) {

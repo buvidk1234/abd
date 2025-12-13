@@ -1,8 +1,8 @@
 package cachekey
 
 const (
-	MallocSeq        = "MALLOC_SEQ:"
-	MallocMinSeqLock = "MALLOC_MIN_SEQ:"
+	ConvSeq    = "ConvSeq_SEQ:"
+	ConvMinSeq = "ConvSeq_MIN_SEQ:"
 
 	SeqUserMaxSeq  = "SEQ_USER_MAX:"
 	SeqUserMinSeq  = "SEQ_USER_MIN:"
@@ -10,11 +10,11 @@ const (
 )
 
 func GetSeqConvKey(conversationID string) string {
-	return MallocSeq + conversationID
+	return ConvSeq + conversationID
 }
 
-func GetMallocMinSeqKey(conversationID string) string {
-	return MallocMinSeqLock + conversationID
+func GetSeqConvMinSeqKey(conversationID string) string {
+	return ConvMinSeq + conversationID
 }
 
 func GetSeqUserMaxSeqKey(conversationID string, userID string) string {

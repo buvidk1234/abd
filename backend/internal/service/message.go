@@ -18,12 +18,14 @@ import (
 type MessageService struct {
 	db           *gorm.DB
 	seqConvCache *redis.SeqConversationCacheRedis
+	seqUserCache *redis.SeqUserCacheRedis
 }
 
 func NewMessageService(db *gorm.DB) *MessageService {
 	return &MessageService{
 		db:           db,
-		seqConvCache: redis.NewSeqConversationCacheRedis(db, redis.RDB),
+		seqConvCache: redis.NewSeqConversationCacheRedis(db, redis.GetRDB()),
+		seqUserCache: redis.NewSeqUserCacheRedis(db, redis.GetRDB()),
 	}
 }
 
@@ -251,8 +253,9 @@ const (
 )
 
 type PullMsgs struct {
-	Msgs  []*model.Message `json:"msgs"`
-	IsEnd bool             `json:"is_end"`
+	Msgs   []*model.Message `json:"msgs"`
+	IsEnd  bool             `json:"is_end"`
+	EndSeq int64            `json:"end_seq"`
 }
 
 type PullMessageBySeqsReq struct {
@@ -310,13 +313,7 @@ func (s *MessageService) PullMessageBySeqs(ctx context.Context, req PullMessageB
 }
 
 func (s *MessageService) getMsgBySeqsRange(ctx context.Context, userID int64, conversationID string, begin, end, num, userMaxSeq int64) (int64, int64, []*model.Message, error) {
-	userMinSeq, err := redis.GetCache(cachekey.GetSeqUserMinSeqKey(conversationID, strconv.FormatInt(userID, 10)), func() (int64, error) {
-		var minSeq int64
-		if err := s.db.WithContext(ctx).Model(&model.SeqUser{}).Where("conversation_id = ? AND user_id = ?", conversationID, userID).Pluck("min_seq", &minSeq).Error; err != nil {
-			return 0, err
-		}
-		return minSeq, nil
-	}, redis.ExpireTime)
+	userMinSeq, err := s.seqUserCache.GetSeqUserMinSeq(ctx, userID, conversationID)
 	if err != nil {
 		return 0, 0, nil, err
 	}
@@ -407,6 +404,186 @@ func (s *MessageService) GetMessageBySeqs(ctx context.Context, conversationID st
 		}
 	}
 	return result, nil
+}
+
+// GetSeqMessage
+type ConversationSeqs struct {
+	ConversationID string  `json:"conversation_id"`
+	Seqs           []int64 `json:"seqs"`
+}
+
+type GetSeqMessageReq struct {
+	UserID        int64               `json:"user_id"`
+	Conversations []*ConversationSeqs `json:"conversations"`
+	Order         PullOrder           `json:"order"`
+}
+
+type GetSeqMessageResp struct {
+	Msgs map[string]*PullMsgs `json:"msgs"`
+}
+
+func (s *MessageService) GetSeqMessage(ctx context.Context, req GetSeqMessageReq) (GetSeqMessageResp, error) {
+	resp := GetSeqMessageResp{
+		Msgs: make(map[string]*PullMsgs),
+	}
+	for _, conv := range req.Conversations {
+		isEnd, endSeq, msgs, err := s.GetMessagesBySeqWithBounds(ctx, req.UserID, conv.ConversationID, conv.Seqs, req.Order)
+		if err != nil {
+			log.Printf("GetSeqMessage error: %v, conversationID: %v", err, conv.ConversationID)
+			continue
+		}
+		resp.Msgs[conv.ConversationID] = &PullMsgs{
+			Msgs:   msgs,
+			IsEnd:  isEnd,
+			EndSeq: endSeq,
+		}
+	}
+	return resp, nil
+}
+func (s *MessageService) GetMessagesBySeqWithBounds(ctx context.Context, userID int64, conversationID string, seqs []int64, pullOrder PullOrder) (bool, int64, []*model.Message, error) {
+	userMinSeq, err := s.seqUserCache.GetSeqUserMinSeq(ctx, userID, conversationID)
+	if err != nil {
+		return false, 0, nil, err
+	}
+	userMaxSeq, err := s.seqUserCache.GetSeqUserMaxSeq(ctx, userID, conversationID)
+	if err != nil {
+		return false, 0, nil, err
+	}
+	minSeq, err := s.seqConvCache.GetMinSeq(ctx, conversationID)
+	if err != nil {
+		return false, 0, nil, err
+	}
+	maxSeq, err := s.seqConvCache.GetMaxSeq(ctx, conversationID)
+	if err != nil {
+		return false, 0, nil, err
+	}
+	if userMinSeq > minSeq {
+		minSeq = userMinSeq
+	}
+	if userMaxSeq != 0 && userMaxSeq < maxSeq {
+		maxSeq = userMaxSeq
+	}
+	var validSeqs []int64
+	var (
+		isEnd  bool
+		endSeq int64
+	)
+	for _, seq := range seqs {
+		if seq >= minSeq && seq <= maxSeq {
+			validSeqs = append(validSeqs, seq)
+		} else if seq < minSeq && pullOrder == PullOrderDesc {
+			isEnd = true
+			endSeq = minSeq
+		} else if seq > maxSeq && pullOrder == PullOrderAsc {
+			isEnd = true
+			endSeq = maxSeq
+		}
+	}
+	if len(validSeqs) == 0 {
+		return isEnd, endSeq, nil, nil
+	}
+	msgs, err := s.GetMessageBySeqs(ctx, conversationID, userID, validSeqs)
+	if err != nil {
+		return false, 0, nil, err
+	}
+	return isEnd, endSeq, msgs, nil
+}
+
+type GetLastMessageReq struct {
+	UserID          int64
+	ConversationIDs []string `json:"conversation_ids"`
+}
+type GetLastMessageResp struct {
+	Messages map[string]*model.Message `json:"messages"`
+}
+
+func (s *MessageService) GetLastMessage(ctx context.Context, req GetLastMessageReq) (GetLastMessageResp, error) {
+	lastMessages := make(map[string]*model.Message)
+	for _, convID := range req.ConversationIDs {
+		userMaxSeq, err := s.seqUserCache.GetSeqUserMaxSeq(ctx, req.UserID, convID)
+		if err != nil {
+			return GetLastMessageResp{}, err
+		}
+		maxSeq, err := s.seqConvCache.GetMaxSeq(ctx, convID)
+		if err != nil {
+			return GetLastMessageResp{}, err
+		}
+		if userMaxSeq != 0 && userMaxSeq < maxSeq {
+			maxSeq = userMaxSeq
+		}
+		if maxSeq == 0 {
+			continue
+		}
+
+		// Check MinSeq 清空历史记录
+		userMinSeq, err := s.seqUserCache.GetSeqUserMinSeq(ctx, req.UserID, convID)
+		if err != nil {
+			return GetLastMessageResp{}, err
+		}
+		minSeq, err := s.seqConvCache.GetMinSeq(ctx, convID)
+		if err != nil {
+			return GetLastMessageResp{}, err
+		}
+		if userMinSeq > minSeq {
+			minSeq = userMinSeq
+		}
+		if maxSeq < minSeq {
+			continue
+		}
+
+		msgs, err := s.GetMessageBySeqs(ctx, convID, req.UserID, []int64{maxSeq})
+		if err != nil {
+			return GetLastMessageResp{}, err
+		}
+		if len(msgs) > 0 {
+			lastMessages[convID] = msgs[0]
+		}
+	}
+	return GetLastMessageResp{Messages: lastMessages}, nil
+}
+
+type GetConversationsHasReadAndMaxSeqReq struct {
+	UserID          int64
+	ConversationIDs []string `json:"conversation_ids"`
+}
+
+type Seqs struct {
+	MaxSeq     int64 `json:"max_seq"`
+	HasReadSeq int64 `json:"has_read_seq"`
+	MaxSeqTime int64 `json:"max_seq_time"`
+}
+
+type GetConversationsHasReadAndMaxSeqResp struct {
+	Seqs map[string]*Seqs `json:"seqs"`
+}
+
+func (s *MessageService) GetConversationsHasReadAndMaxSeq(ctx context.Context, req GetConversationsHasReadAndMaxSeqReq) (GetConversationsHasReadAndMaxSeqResp, error) {
+	resp := GetConversationsHasReadAndMaxSeqResp{
+		Seqs: make(map[string]*Seqs),
+	}
+	maxSeqs, err := s.seqConvCache.GetMaxSeqs(ctx, req.ConversationIDs)
+	if err != nil {
+		return GetConversationsHasReadAndMaxSeqResp{}, err
+	}
+	var conversations []model.Conversation
+	if err := s.db.WithContext(ctx).Where("owner_id = ? AND conversation_id IN ?", req.UserID, req.ConversationIDs).Find(&conversations).Error; err != nil {
+		return GetConversationsHasReadAndMaxSeqResp{}, err
+	}
+	convMap := make(map[string]model.Conversation)
+	for _, c := range conversations {
+		convMap[c.ConversationID] = c
+	}
+	for _, convID := range req.ConversationIDs {
+		var hasReadSeq int64
+		if c, ok := convMap[convID]; ok {
+			hasReadSeq = c.ReadSeq
+		}
+		resp.Seqs[convID] = &Seqs{
+			MaxSeq:     maxSeqs[convID],
+			HasReadSeq: hasReadSeq,
+		}
+	}
+	return resp, nil
 }
 
 // ===================== Initialization Functions =====================

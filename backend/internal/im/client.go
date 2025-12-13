@@ -174,24 +174,44 @@ func (c *Client) handleMessage(b []byte) error {
 	ctx = context.WithValue(ctx, ctxKeyPlatform, c.PlatformID)
 	log.Print("调用后端服务")
 	switch binaryReq.ReqIdentifier {
+	// case WSSendMsg:
+	// 	log.Println("发信息")
+	// 	resp, err = c.server.SendMessage(ctx, binaryReq)
+	// case WSPullSpecifiedConv:
+	// 	log.Println("拉取指定会话")
+	// 	resp, err = c.server.PullSpecifiedConv(ctx, binaryReq)
+	// case WSPullConvList:
+	// 	log.Println("拉取会话列表")
+	// 	resp, err = c.server.PullConvList(ctx, binaryReq)
+	case WSGetNewestSeq:
+		log.Printf("获取用户各会话最大序列号")
+		resp, err = c.server.GetSeq(ctx, binaryReq)
 	case WSSendMsg:
-		log.Println("发信息")
+		log.Printf("发送消息")
 		resp, err = c.server.SendMessage(ctx, binaryReq)
-	case WSPullSpecifiedConv:
-		log.Println("拉取指定会话")
-		resp, err = c.server.PullSpecifiedConv(ctx, binaryReq)
-	case WSPullConvList:
-		log.Println("拉取会话列表")
-		resp, err = c.server.PullConvList(ctx, binaryReq)
+	case WSPullMsgBySeqList:
+		log.Printf("拉取消息列表")
+		resp, err = c.server.PullMessageBySeqList(ctx, binaryReq)
+	case WSPullMsg:
+		log.Printf("拉取消息")
+		resp, err = c.server.GetSeqMessage(ctx, binaryReq)
+	case WSGetConvMaxReadSeq:
+		log.Printf("获取会话已读和最大序列号")
+		resp, err = c.server.GetConversationsHasReadAndMaxSeq(ctx, binaryReq)
+	case WsPullConvLastMessage:
+		log.Printf("获取会话最后一条消息")
+		resp, err = c.server.GetLastMessage(ctx, binaryReq)
+	// case WsLogoutMsg:
+	// 	resp, err = c.server.UserLogout(ctx, binaryReq)
+	// case WsSubUserOnlineStatus:
+	// 	resp, err = c.server.SubUserOnlineStatus(ctx, c, binaryReq)
 	default:
-		log.Printf("unknown req identifier: %d", binaryReq.ReqIdentifier)
 		return fmt.Errorf(
 			"ReqIdentifier failed,sendID:%s,msgIncr:%s,reqIdentifier:%d",
 			binaryReq.SendID,
 			binaryReq.MsgIncr,
 			binaryReq.ReqIdentifier,
 		)
-
 	}
 	return c.replyMessage(binaryReq, resp, err)
 }

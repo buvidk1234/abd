@@ -22,7 +22,10 @@ require (
 	gorm.io/gorm v1.31.1
 )
 
-require github.com/IBM/sarama v1.46.3
+require (
+	github.com/IBM/sarama v1.46.3
+	golang.org/x/sync v0.19.0
+)
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
@@ -81,7 +84,6 @@ require (
 	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/tools v0.39.0 // indirect

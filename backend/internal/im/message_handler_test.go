@@ -29,7 +29,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		&model.SeqConversation{},
 		&model.Conversation{},
 		&model.SeqUser{},
-		&model.UserTimeline{},
+		// &model.UserTimeline{},
 	)
 	if err != nil {
 		t.Fatalf("failed to migrate database: %v", err)

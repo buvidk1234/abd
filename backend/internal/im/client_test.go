@@ -1,6 +1,8 @@
 package im
 
 import (
+	"backend/internal/pkg/cache/redis"
+	"backend/internal/pkg/database"
 	"backend/internal/pkg/kafka"
 	"context"
 	"net/http"
@@ -10,11 +12,29 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestClient_ResetClient(t *testing.T) {
 	// 初始化 Kafka 配置，防止 NewWsServer panic
 	kafka.Init(kafka.Config{Addr: []string{"192.168.6.130:9092"}})
+
+	// 初始化 Redis
+	redis.Init(redis.Config{
+		Addr:         "192.168.6.130:6379",
+		Password:     "123456",
+		DB:           0,
+		PoolSize:     10,
+		MinIdleConns: 2,
+	})
+
+	// 初始化 DB (In-Memory)
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to connect database: %v", err)
+	}
+	database.DB = db
 
 	// Setup a test server to handle the websocket connection
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

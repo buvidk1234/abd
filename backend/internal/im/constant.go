@@ -19,10 +19,17 @@ const (
 
 const (
 	// Websocket Protocol.
-	WSSendMsg           = 1001
-	WSPullSpecifiedConv = 1002
-	WSPullConvList      = 1003
+	// WSSendMsg           = 1001
+	// WSPullSpecifiedConv = 1002
+	// WSPullConvList      = 1003
 
+	WSGetNewestSeq        = 1001
+	WSPullMsgBySeqList    = 1002
+	WSSendMsg             = 1003
+	WSSendSignalMsg       = 1004
+	WSPullMsg             = 1005
+	WSGetConvMaxReadSeq   = 1006
+	WsPullConvLastMessage = 1007
 	WSPushMsg             = 2001
 	WSKickOnlineMsg       = 2002
 	WsLogoutMsg           = 2003

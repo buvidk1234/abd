@@ -132,3 +132,97 @@ func TestGetMaxSeqs(t *testing.T) {
 
 	t.Logf("GetMaxSeqs result: %+v", seqs)
 }
+
+func TestGetMaxSeqsWithTime(t *testing.T) {
+	// 1. 初始化 Redis 和 SQLite
+	rdb := redis.NewClient(&redis.Options{
+		Addr:         "192.168.6.130:6379",
+		Password:     "123456",
+		DB:           0,
+		PoolSize:     5,
+		MinIdleConns: 2,
+		DialTimeout:  3 * time.Second,
+		ReadTimeout:  2 * time.Second,
+		WriteTimeout: 2 * time.Second,
+		PoolTimeout:  3 * time.Second,
+	})
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to connect database: %v", err)
+	}
+	db.AutoMigrate(&model.SeqConversation{})
+
+	// 清理环境
+	rdb.FlushDB(context.Background())
+	db.Exec("DELETE FROM seq_conversations")
+
+	seqCache := NewSeqConversationCacheRedis(db, rdb)
+	ctx := context.Background()
+
+	// 准备测试数据
+	convID1 := "conv_time_001"
+	convID2 := "conv_time_002"
+	convID3 := "conv_time_003"
+
+	// 场景 1: 缓存中存在 (先 Malloc 产生数据)
+	// conv_time_001: Malloc 10
+	if _, err := seqCache.Malloc(ctx, convID1, 10); err != nil {
+		t.Fatalf("Malloc failed: %v", err)
+	}
+	// 此时 Redis 中应该有 conv_time_001 的 CURR 和 TIME
+
+	// 场景 2: 缓存中不存在 (DB 中有数据，但 Redis 被清空)
+	// conv_time_002: 直接写 DB
+	db.Create(&model.SeqConversation{ID: convID2, MaxSeq: 100})
+
+	// 场景 3: 完全不存在
+	// conv_time_003
+
+	// 测试 GetMaxSeqsWithTime
+	convIDs := []string{convID1, convID2, convID3}
+	result, err := seqCache.GetMaxSeqsWithTime(ctx, convIDs)
+	if err != nil {
+		t.Fatalf("GetMaxSeqsWithTime failed: %v", err)
+	}
+
+	// 验证 convID1
+	if val, ok := result[convID1]; !ok {
+		t.Errorf("convID1 not found in result")
+	} else {
+		if val.Seq != 10 {
+			t.Errorf("convID1 seq expected 10, got %d", val.Seq)
+		}
+		if val.Time <= 0 {
+			t.Errorf("convID1 time should be > 0, got %d", val.Time)
+		}
+	}
+
+	// 验证 convID2
+	if val, ok := result[convID2]; !ok {
+		t.Errorf("convID2 not found in result")
+	} else {
+		// 注意：GetMaxSeqWithTime 内部调用 mallocTime(size=0)
+		// 如果缓存没有，会去 DB 查。DB 是 100。
+		if val.Seq != 100 {
+			t.Errorf("convID2 seq expected 100, got %d", val.Seq)
+		}
+		// 修复后，如果从 DB 加载且 size=0，Time 应该是 0
+		if val.Time != 0 {
+			t.Errorf("convID2 time expected 0, got %d", val.Time)
+		}
+	}
+
+	// 验证 convID3
+	if val, ok := result[convID3]; !ok {
+		t.Errorf("convID3 not found in result")
+	} else {
+		// convID3 不存在，mallocTime(size=0) 会触发 FirstOrCreate(MaxSeq: 0)
+		if val.Seq != 0 {
+			t.Errorf("convID3 seq expected 0, got %d", val.Seq)
+		}
+		// 修复后，如果从 DB 加载且 size=0，Time 应该是 0
+		if val.Time != 0 {
+			t.Errorf("convID3 time expected 0, got %d", val.Time)
+		}
+	}
+}

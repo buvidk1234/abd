@@ -84,10 +84,23 @@ func NewGinRouter() *gin.Engine {
 			msgGroup.POST("/send", m.SendMessage)              // 发送消息
 			msgGroup.GET("/pull", m.PullConvList)              // 拉取会话列表
 			msgGroup.GET("/pull/:convID", m.PullSpecifiedConv) // 拉取某个会话的消息
-			// msgGroup.DELETE("/delete_conversation", m.DeleteConversation) // 删除会话
-			// msgGroup.POST("/revoke_msg", m.RevokeMsg)             // 撤回消息
-			// msgGroup.POST("/delete_msgs", m.DeleteMsgs)           // 删除消息
-			// msgGroup.POST("/newest_seq", m.GetSeq)                // 获取最新消息序列号
+			// msgGroup.POST("/newest-seq", m.GetSeq)
+			// msgGroup.POST("/search", m.SearchMsg)
+			// msgGroup.POST("/send", m.SendMessage)
+			// msgGroup.POST("/send-business-notification", m.SendBusinessNotification)
+			// msgGroup.POST("/pull", m.PullMsgBySeqs)
+			// msgGroup.POST("/revoke", m.RevokeMsg)
+			// msgGroup.POST("/mark-read", m.MarkMsgsAsRead)
+			// msgGroup.POST("/sync-convs", m.GetConversationsHasReadAndMaxSeq)
+			// msgGroup.POST("/read", m.SetConversationHasReadSeq)
+
+			// msgGroup.POST("/clear-conv", m.ClearConversationsMsg)
+			// msgGroup.POST("/clear-all", m.UserClearAllMsg)
+			// msgGroup.POST("/delete", m.DeleteMsgs)
+			// msgGroup.POST("/delete-physical", m.DeleteMsgPhysical)
+
+			// msgGroup.POST("/batch-send", m.BatchSendMsg)
+			// msgGroup.POST("/server-time", m.GetServerTime)
 		}
 
 	}
