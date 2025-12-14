@@ -3,21 +3,25 @@ package imrepo
 import (
 	"backend/internal/model"
 	"backend/internal/pkg/cache/cachekey"
+	"backend/internal/pkg/cache/redis"
 	"backend/internal/pkg/database"
 	"context"
 	"encoding/json"
 	"testing"
 	"time"
-
-	"github.com/redis/go-redis/v9"
 )
 
 func TestImRepo(t *testing.T) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "192.168.6.130:6379",
-		Password: "123456",
-		DB:       0,
+	// 初始化 Redis 全局客户端
+	redis.Init(redis.Config{
+		Addr:         "192.168.6.130:6379",
+		Password:     "123456",
+		DB:           0,
+		PoolSize:     10,
+		MinIdleConns: 2,
 	})
+	rdb := redis.GetRDB()
+
 	db := database.GetDB()
 	db.AutoMigrate(model.SeqConversation{})
 
@@ -45,7 +49,7 @@ func TestImRepo(t *testing.T) {
 	}
 
 	// 2. 执行批量插入
-	err := imRepo.BatchStoreMsgToRedis(ctx, conversationID, msgs)
+	_, err := imRepo.BatchStoreMsgToRedis(ctx, conversationID, msgs)
 	if err != nil {
 		t.Fatalf("BatchStoreMsgToRedis failed: %v", err)
 	}
@@ -77,11 +81,16 @@ func TestImRepo(t *testing.T) {
 }
 
 func TestBatchStoreMsgToDB(t *testing.T) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "192.168.6.130:6379",
-		Password: "123456",
-		DB:       0,
+	// 初始化 Redis 全局客户端
+	redis.Init(redis.Config{
+		Addr:         "192.168.6.130:6379",
+		Password:     "123456",
+		DB:           0,
+		PoolSize:     10,
+		MinIdleConns: 2,
 	})
+	rdb := redis.GetRDB()
+
 	db := database.GetDB()
 	db.AutoMigrate(&model.Message{})
 

@@ -233,16 +233,16 @@ func (c *Client) writeBinaryMsg(resp Resp) error {
 	if err != nil {
 		return err
 	}
-	//if c.IsCompress {
-	//	data, err = c.server.Compress(data)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
+	if c.IsCompress {
+		data, err = c.server.Compress(data)
+		if err != nil {
+			return err
+		}
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-	err = c.conn.WriteMessage(MessageText, data)
+	err = c.conn.WriteMessage(MessageText, data) // TODO: use binary message
 	return err
 }
 

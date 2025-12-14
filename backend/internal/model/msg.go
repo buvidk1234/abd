@@ -39,7 +39,7 @@ type Conversation struct {
 	MinSeq  int64 `gorm:"column:min_seq" json:"min_seq"`   // 会话内最小 GroupSeq
 	MaxSeq  int64 `gorm:"column:max_seq" json:"max_seq"`   // 能检索的最大值
 	ReadSeq int64 `gorm:"column:read_seq" json:"read_seq"` // 已读到的 GroupSeq
-	SyncSeq int64 `gorm:"column:sync_seq" json:"sync_seq"` // 仅用于 Timeline 模式：最后一条同步到的 Timeline Seq,如果用户传的是0，同步最近min(100, SyncSeq-0)条消息。 单设备
+	// SyncSeq int64 `gorm:"column:sync_seq" json:"sync_seq"` // 仅用于 Timeline 模式：最后一条同步到的 Timeline Seq,如果用户传的是0，同步最近min(100, SyncSeq-0)条消息。 单设备
 
 	// 6. 冗余显示 (兜底用)
 	LastMsgID       int64  `gorm:"column:last_msg_id" json:"last_msg_id,string"`

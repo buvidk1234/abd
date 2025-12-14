@@ -37,11 +37,12 @@ type SendMessageReq struct {
 	Content  string `json:"content" binding:"required"`
 }
 
+// Deprecated: use im/distributor instead
 func (s *MessageService) SendMessage(ctx context.Context, req SendMessageReq) error {
 	conversationID := GetConversationID(req.ConvType, req.SenderID, req.TargetID)
 
 	// TODO: 创建好友时或加入群聊时调用，初始化会话记录
-	s.InitConversationForUser(ctx, req)
+	// s.InitConversationForUser(ctx, req)
 
 	var newSeq int64
 	var msg model.Message
@@ -204,7 +205,7 @@ func (s *MessageService) DeleteConversation(ctx context.Context, userID int64, c
 }
 
 type GetMaxSeqReq struct {
-	UserID int64
+	UserID int64 `json:"user_id,string"`
 }
 type GetMaxSeqResp struct {
 	MaxSeqs map[string]int64 `json:"max_seqs"`
@@ -259,7 +260,7 @@ type PullMsgs struct {
 }
 
 type PullMessageBySeqsReq struct {
-	UserID    int64       `json:"user_id"`
+	UserID    int64       `json:"user_id,string"`
 	SeqRanges []*SeqRange `json:"seq_ranges"`
 	Order     PullOrder   `json:"order"`
 }
@@ -413,7 +414,7 @@ type ConversationSeqs struct {
 }
 
 type GetSeqMessageReq struct {
-	UserID        int64               `json:"user_id"`
+	UserID        int64               `json:"user_id,string"`
 	Conversations []*ConversationSeqs `json:"conversations"`
 	Order         PullOrder           `json:"order"`
 }
@@ -490,7 +491,7 @@ func (s *MessageService) GetMessagesBySeqWithBounds(ctx context.Context, userID 
 }
 
 type GetLastMessageReq struct {
-	UserID          int64
+	UserID          int64    `json:"user_id,string"`
 	ConversationIDs []string `json:"conversation_ids"`
 }
 type GetLastMessageResp struct {
@@ -543,7 +544,7 @@ func (s *MessageService) GetLastMessage(ctx context.Context, req GetLastMessageR
 }
 
 type GetConversationsHasReadAndMaxSeqReq struct {
-	UserID          int64
+	UserID          int64    `json:"user_id,string"`
 	ConversationIDs []string `json:"conversation_ids"`
 }
 
@@ -588,8 +589,14 @@ func (s *MessageService) GetConversationsHasReadAndMaxSeq(ctx context.Context, r
 
 // ===================== Initialization Functions =====================
 
-// TODO: 成为好友，或加入群组时调用，初始化会话记录
-func (s *MessageService) InitConversationForUser(ctx context.Context, req SendMessageReq) error {
+type InitConversationReq struct {
+	SenderID int64 `json:"sender_id,string"`
+	ConvType int32 `json:"conv_type" binding:"required"`
+	TargetID int64 `json:"target_id,string" binding:"required"`
+}
+
+// 发信息时调用，初始化会话记录
+func (s *MessageService) InitConversation(ctx context.Context, req InitConversationReq) error {
 	conversationID := GetConversationID(req.ConvType, req.SenderID, req.TargetID)
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		switch req.ConvType {
@@ -604,62 +611,11 @@ func (s *MessageService) InitConversationForUser(ctx context.Context, req SendMe
 					return err
 				}
 			}
-			seqConversation := model.SeqConversation{
-				ID:     conversationID,
-				MaxSeq: 0,
-			}
-			if err := tx.FirstOrCreate(&seqConversation, "id = ?", conversationID).Error; err != nil {
-				return err
-			}
 		case constant.GroupChatType:
-			// 确保群组会话记录存在
-			var seqConversation model.SeqConversation
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", conversationID).First(&seqConversation).Error; err != nil {
-				return err
-			}
-			conversation := model.Conversation{
-				OwnerID:        req.SenderID,
-				ConversationID: conversationID,
-				MinSeq:         seqConversation.MaxSeq,
-				SyncSeq:        seqConversation.MaxSeq,
-			}
-			if err := tx.FirstOrCreate(&conversation).Error; err != nil {
-				return err
-			}
+			// TODO: 获取所有群成员ID，为所有没有群组会话记录的成员创建会话记录
+
 		default:
 			return errors.New("invalid session type")
-		}
-		return nil
-	})
-}
-
-// TODO: 创建群组时调用，初始化群组会话记录
-func (s *MessageService) InitConversationForCreateGroup(ctx context.Context, groupID string, memberIDs []int64) error {
-	conversationID := GetConversationID(constant.GroupChatType, 0, 0) // groupID needs to be int64 or handled differently. Wait, GetConversationID expects int64 receiverID.
-	// Issue: receiverID in GetConversationID for group is groupID. But groupID is string in Group struct (though usually int64 in DB converted to string).
-	// Let's check model/group.go. ID is uint. GroupID is not explicitly stored in model, but ID is.
-	// In service/group.go `groupID = strconv.Itoa(int(group.ID))`. So groupID is string representation of int.
-	// I should parse groupID string to int64 here.
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		seqConversation := model.SeqConversation{
-			ID:     conversationID,
-			MaxSeq: 0,
-		}
-		if err := tx.FirstOrCreate(&seqConversation, "conversation_id = ?", conversationID).Error; err != nil {
-			return err
-		}
-
-		var conversations []model.Conversation
-		for _, memberID := range memberIDs {
-			conversations = append(conversations, model.Conversation{
-				OwnerID:        memberID,
-				ConversationID: conversationID,
-			})
-		}
-		if len(conversations) > 0 {
-			if err := tx.Create(&conversations).Error; err != nil {
-				return err
-			}
 		}
 		return nil
 	})

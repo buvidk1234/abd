@@ -99,7 +99,7 @@ func (bp *BatchProcessor[T]) schedule() {
 				dataTmp = make(map[string][]T)
 			}
 		case <-ticker.C:
-			log.Println("ticker ticked")
+			// log.Println("ticker ticked")
 			if counter > 0 {
 				// dispatch data
 				bp.dispatch(dataTmp, counter)

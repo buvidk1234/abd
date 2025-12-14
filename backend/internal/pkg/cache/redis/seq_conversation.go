@@ -277,7 +277,7 @@ func (s *SeqConversationCacheRedis) mallocFromDB(ctx context.Context, conversati
 	var seqModel model.SeqConversation
 	var oldSeq int64
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).FirstOrCreate(&seqModel, model.SeqConversation{ID: conversationID, MaxSeq: 0}).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).FirstOrCreate(&seqModel, model.SeqConversation{ID: conversationID}).Error; err != nil {
 			return err
 		}
 		oldSeq = seqModel.MaxSeq

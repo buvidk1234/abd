@@ -20,11 +20,13 @@ import (
 
 type Distributor struct {
 	wsServer *im.WsServer
+	repo     *imrepo.ImRepo
 }
 
 func NewDistributor(wsServer *im.WsServer) *Distributor {
 	return &Distributor{
 		wsServer: wsServer,
+		repo:     imrepo.NewImRepo(database.GetDB(), redis.GetRDB()),
 	}
 }
 
@@ -41,8 +43,6 @@ func (d *Distributor) Start() {
 	}
 
 	onlinePushProducer, _ := kafka.NewSyncProducer()
-
-	repo := imrepo.NewImRepo(database.GetDB(), redis.GetRDB())
 
 	batchprocessor.Do = func(ctx context.Context, channelID int, msgs []*service.SendMessageReq) {
 		// TODO:
@@ -67,12 +67,22 @@ func (d *Distributor) Start() {
 			msgsToStore = append(msgsToStore, msg)
 		}
 		// 1. 存储消息到缓存
-		err := repo.BatchStoreMsgToRedis(ctx, convID, msgsToStore)
+		isNewConversation, err := d.repo.BatchStoreMsgToRedis(ctx, convID, msgsToStore)
 		if err != nil {
 			log.Printf("distributor: BatchStoreMsgToRedis error: %v", err)
 		}
+
+		if isNewConversation {
+			log.Printf("distributor: new conversation created: %s", convID)
+			d.repo.CreateConversations(ctx, service.InitConversationReq{
+				SenderID: msgs[0].SenderID,
+				ConvType: msgs[0].ConvType,
+				TargetID: msgs[0].TargetID,
+			})
+		}
+
 		// 2. 存储消息到数据库
-		go repo.BatchStoreMsgToDB(context.Background(), msgsToStore)
+		go d.repo.BatchStoreMsgToDB(context.Background(), msgsToStore)
 
 		// 2. 发送消息给在线用户
 		for _, msg := range msgsToStore {
