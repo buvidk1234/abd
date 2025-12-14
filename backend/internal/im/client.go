@@ -126,10 +126,10 @@ func (c *Client) readMessage() {
 			log.Printf("readMessage: %v", err)
 			return
 		}
-		log.Println("读取到信息")
 
 		switch messageType {
 		case MessageText:
+			log.Printf("读取到文本信息")
 			_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
 			c.handleMessage(message)
 		//case MessageText:

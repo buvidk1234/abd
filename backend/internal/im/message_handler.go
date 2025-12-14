@@ -91,17 +91,19 @@ func (s *ServiceHandler) GetSeq(ctx context.Context, data *Req) (any, error) {
 	if err := json.Unmarshal(data.Data, &getSeqReq); err != nil {
 		return nil, err
 	}
+	log.Printf("GetSeq request: %+v", getSeqReq)
 	resp, err := s.messageService.GetMaxSeq(ctx, getSeqReq)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("GetSeq response: %+v", resp)
 	// r, _ := json.Marshal(resp)
 	return resp, nil
 }
 
 func (s *ServiceHandler) SendMessage(ctx context.Context, data *Req) (any, error) {
 	// encode
-	log.Print("SendMessage")
+	log.Printf("SendMessage: %+v", data)
 	// var sendMsgReq service.SendMessageReq
 	// if err := json.Unmarshal(data.Data, &sendMsgReq); err != nil {
 	// 	return nil, err
@@ -129,10 +131,12 @@ func (s *ServiceHandler) PullMessageBySeqList(ctx context.Context, data *Req) (a
 	if err := json.Unmarshal(data.Data, &pullReq); err != nil {
 		return nil, err
 	}
+	log.Printf("PullMessageBySeqList request: %+v", pullReq)
 	resp, err := s.messageService.PullMessageBySeqs(ctx, pullReq)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("PullMessageBySeqList response: %+v", resp)
 	// r, _ := json.Marshal(resp)
 	return resp, nil
 }
@@ -142,10 +146,12 @@ func (s *ServiceHandler) GetConversationsHasReadAndMaxSeq(ctx context.Context, d
 	if err := json.Unmarshal(data.Data, &getReq); err != nil {
 		return nil, err
 	}
+	log.Printf("GetConversationsHasReadAndMaxSeq request: %+v", getReq)
 	resp, err := s.messageService.GetConversationsHasReadAndMaxSeq(ctx, getReq)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("GetConversationsHasReadAndMaxSeq response: %+v", resp)
 	// r, _ := json.Marshal(resp)
 	return resp, nil
 }
@@ -154,10 +160,12 @@ func (s *ServiceHandler) GetLastMessage(ctx context.Context, data *Req) (any, er
 	if err := json.Unmarshal(data.Data, &getLastMsgReq); err != nil {
 		return nil, err
 	}
+	log.Printf("GetLastMessage request: %+v", getLastMsgReq)
 	resp, err := s.messageService.GetLastMessage(ctx, getLastMsgReq)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("GetLastMessage response: %+v", resp)
 	// r, _ := json.Marshal(resp)
 	return resp, nil
 }
@@ -167,10 +175,12 @@ func (s *ServiceHandler) GetSeqMessage(ctx context.Context, data *Req) (any, err
 	if err := json.Unmarshal(data.Data, &getSeqMsgReq); err != nil {
 		return nil, err
 	}
+	log.Printf("GetSeqMessage request: %+v", getSeqMsgReq)
 	resp, err := s.messageService.GetSeqMessage(ctx, getSeqMsgReq)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("GetSeqMessage response: %+v", resp)
 	// r, _ := json.Marshal(resp)
 	return resp, nil
 }
@@ -180,10 +190,12 @@ func (s *ServiceHandler) PullSpecifiedConv(ctx context.Context, data *Req) (any,
 	if err := json.Unmarshal(data.Data, &pullReq); err != nil {
 		return nil, err
 	}
+	log.Printf("PullSpecifiedConv request: %+v", pullReq)
 	resp, err := s.messageService.PullSpecifiedConv(ctx, pullReq)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("PullSpecifiedConv response: %+v", resp)
 	return resp, nil
 }
 func (s *ServiceHandler) PullConvList(ctx context.Context, data *Req) (any, error) {
@@ -191,9 +203,11 @@ func (s *ServiceHandler) PullConvList(ctx context.Context, data *Req) (any, erro
 	if err := json.Unmarshal(data.Data, &pullReq); err != nil {
 		return nil, err
 	}
+	log.Printf("PullConvList request: %+v", pullReq)
 	resp, err := s.messageService.PullConvList(ctx, pullReq)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("PullConvList response: %+v", resp)
 	return resp, nil
 }

@@ -277,6 +277,7 @@ func (s *MessageService) PullMessageBySeqs(ctx context.Context, req PullMessageB
 	}
 
 	for _, seqRange := range req.SeqRanges {
+		log.Printf("PullMessageBySeqs processing conversationID: %v, begin: %v, end: %v, num: %v", seqRange.ConversationID, seqRange.Begin, seqRange.End, seqRange.Num)
 		conversation, err := redis.GetCache(cachekey.GetConversationKey(strconv.FormatInt(req.UserID, 10), seqRange.ConversationID), func() (model.Conversation, error) {
 			var conv model.Conversation
 			if err := s.db.WithContext(ctx).Where("owner_id = ? AND conversation_id = ?", req.UserID, seqRange.ConversationID).First(&conv).Error; err != nil {
