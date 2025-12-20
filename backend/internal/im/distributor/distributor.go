@@ -62,6 +62,7 @@ func (d *Distributor) Start() {
 				Content:        msgReq.Content,
 				ConvType:       msgReq.ConvType,
 				TargetID:       msgReq.TargetID,
+				ClientMsgID:    msgReq.ClientMsgID,
 				SendTime:       time.Now().UnixMilli(),
 			}
 			msgsToStore = append(msgsToStore, msg)

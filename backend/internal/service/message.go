@@ -30,11 +30,12 @@ func NewMessageService(db *gorm.DB) *MessageService {
 }
 
 type SendMessageReq struct {
-	SenderID int64  `json:"sender_id,string"`
-	ConvType int32  `json:"conv_type" binding:"required"`
-	TargetID int64  `json:"target_id,string" binding:"required"`
-	MsgType  int32  `json:"msg_type" binding:"required"`
-	Content  string `json:"content" binding:"required"`
+	SenderID    int64  `json:"sender_id,string"`
+	ConvType    int32  `json:"conv_type" binding:"required"`
+	TargetID    int64  `json:"target_id,string" binding:"required"`
+	MsgType     int32  `json:"msg_type" binding:"required"`
+	ClientMsgID string `json:"client_msg_id"`
+	Content     string `json:"content" binding:"required"`
 }
 
 // Deprecated: use im/distributor instead

@@ -44,13 +44,25 @@ func (p *Pusher) PushMessageToUser() error {
 		log.Printf("Push message to users: %+v", msg)
 		switch msg.ConvType {
 		case constant.SingleChatType:
-			clients, have := p.wsServer.Clients.GetAll(msg.TargetID)
-			if !have {
+			clients := make(map[int64][]*im.Client, 2)
+			if targetClients, ok := p.wsServer.Clients.GetAll(msg.TargetID); ok {
+				clients[msg.TargetID] = targetClients
+			}
+			if senderClients, ok := p.wsServer.Clients.GetAll(msg.SenderID); ok {
+				// sender==target 时会自动合并到同一个 key
+				clients[msg.SenderID] = append(clients[msg.SenderID], senderClients...)
+			}
+
+			// 两边都不在线就直接返回
+			if len(clients) == 0 {
 				return nil
 			}
-			for _, client := range clients {
-				if err := client.PushMessage(context.Background(), msg); err != nil {
-					log.Printf("push message to user %d failed: %v", msg.TargetID, err)
+			ctx := context.Background()
+			for uid, cs := range clients {
+				for _, c := range cs {
+					if err := c.PushMessage(ctx, msg); err != nil {
+						log.Printf("push message to user %d failed: %v", uid, err)
+					}
 				}
 			}
 		case constant.GroupChatType:
