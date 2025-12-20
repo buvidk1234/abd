@@ -4,6 +4,7 @@ import (
 	"backend/internal/pkg/cache/redis"
 	"backend/internal/pkg/database"
 	"backend/internal/pkg/kafka"
+	"backend/pkg/util"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -47,8 +48,14 @@ func TestClient_ResetClient(t *testing.T) {
 	}))
 	defer s.Close()
 
+	userID := int64(12345)
+	token, err := util.GenerateToken(userID)
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
 	// Connect to the test server
-	u := "ws" + strings.TrimPrefix(s.URL, "http") + "/?sendID=user1&platformID=1&compression=gzip&token=test_token"
+	u := "ws" + strings.TrimPrefix(s.URL, "http") + "/?sendID=user1&platformID=1&compression=gzip&token=" + token
 	conn, _, err := websocket.DefaultDialer.Dial(u, nil)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
@@ -64,8 +71,8 @@ func TestClient_ResetClient(t *testing.T) {
 
 	client.ResetClient(w, req, conn, wsServer)
 
-	if client.UserID != "user1" {
-		t.Errorf("expected UserID 'user1', got '%s'", client.UserID)
+	if client.UserID != userID {
+		t.Errorf("expected UserID %d, got '%d'", userID, client.UserID)
 	}
 	if client.PlatformID != 1 {
 		t.Errorf("expected PlatformID 1, got %d", client.PlatformID)
@@ -73,8 +80,8 @@ func TestClient_ResetClient(t *testing.T) {
 	if !client.IsCompress {
 		t.Errorf("expected IsCompress true, got %v", client.IsCompress)
 	}
-	if client.token != "test_token" {
-		t.Errorf("expected token 'test_token', got '%s'", client.token)
+	if client.token != token {
+		t.Errorf("expected token '%s', got '%s'", token, client.token)
 	}
 	if client.server != wsServer {
 		t.Errorf("expected server to be set")

@@ -18,15 +18,16 @@ func newTestClient(platformID int, addr string) *Client {
 
 func TestUserMap_SetGetDelete(t *testing.T) {
 	um := newUserMap()
+	const userID = int64(1)
 
 	c1 := newTestClient(1, "addr1")
 	c2 := newTestClient(2, "addr2")
 
-	um.Set("u1", c1)
-	um.Set("u1", c2)
+	um.Set(userID, c1)
+	um.Set(userID, c2)
 
 	// GetAll
-	all, ok := um.GetAll("u1")
+	all, ok := um.GetAll(userID)
 	if !ok {
 		t.Fatalf("expected user present")
 	}
@@ -35,14 +36,14 @@ func TestUserMap_SetGetDelete(t *testing.T) {
 	}
 
 	// Get by platform
-	byPlat, ok, exists := um.Get("u1", 1)
+	byPlat, ok, exists := um.Get(userID, 1)
 	if !ok || !exists || len(byPlat) != 1 {
 		t.Fatalf("expected to find platform 1 client")
 	}
 
 	// Delete one client and expect user still exists
 	ch := um.UserState()
-	deleted := um.DeleteClients("u1", []*Client{c1})
+	deleted := um.DeleteClients(userID, []*Client{c1})
 	if deleted {
 		t.Fatalf("expected user not deleted after removing one of two clients")
 	}
@@ -61,7 +62,7 @@ func TestUserMap_SetGetDelete(t *testing.T) {
 	}
 
 	// Now delete remaining client and expect user removed
-	deleted = um.DeleteClients("u1", []*Client{c2})
+	deleted = um.DeleteClients(userID, []*Client{c2})
 	if !deleted {
 		t.Fatalf("expected user deleted after removing last client")
 	}
@@ -82,10 +83,11 @@ func TestUserMap_SetGetDelete(t *testing.T) {
 
 func TestUserMap_GetAllUserStatus_And_RecvSubChange(t *testing.T) {
 	um := newUserMap()
+	const userID = int64(2)
 
 	// Add a user (LastActive will be zero time)
 	c := newTestClient(3, "addr3")
-	um.Set("u2", c)
+	um.Set(userID, c)
 
 	// deadline = now -> since LastActive is zero, user should be included
 	res := um.GetAllUserStatus(time.Now(), time.Now())
@@ -93,12 +95,12 @@ func TestUserMap_GetAllUserStatus_And_RecvSubChange(t *testing.T) {
 		t.Fatalf("expected 1 user in GetAllUserStatus, got %d", len(res))
 	}
 
-	if res[0].UserID != "u2" {
-		t.Fatalf("unexpected userid: %s", res[0].UserID)
+	if res[0].UserID != userID {
+		t.Fatalf("unexpected userid: %d", res[0].UserID)
 	}
 
 	// RecvSubChange currently returns true (TODO)
-	if !um.RecvSubChange("u2", []int32{3}) {
+	if !um.RecvSubChange(userID, []int32{3}) {
 		t.Fatalf("expected RecvSubChange to return true")
 	}
 }

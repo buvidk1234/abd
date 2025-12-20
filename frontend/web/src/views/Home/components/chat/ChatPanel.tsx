@@ -3,8 +3,8 @@ import { ArrowLeft, Info, Search } from 'lucide-react'
 
 import chatBg from '@/assets/chat/chat_bg.svg'
 import startChat from '@/assets/chat/start_chat.svg'
-import type { ConversationItem, MessageItem } from '../types'
-import { IconButton } from './common'
+import type { ConversationItem, MessageItem } from '../../types'
+import { IconButton } from '../common'
 
 interface ChatPanelProps {
   themeColor: string
@@ -49,7 +49,11 @@ export function ChatPanel({
       <div className="relative flex-1 overflow-hidden">
         <div
           className="absolute inset-0 opacity-60"
-          style={{ backgroundImage: `url(${chatBg})`, backgroundRepeat: 'repeat', backgroundSize: '360px' }}
+          style={{
+            backgroundImage: `url(${chatBg})`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: '360px',
+          }}
         />
         <div className="relative flex h-full flex-col">
           <div className="flex-1 space-y-4 overflow-y-auto px-4 py-6 md:px-8">
@@ -59,7 +63,12 @@ export function ChatPanel({
               </div>
             ) : (
               conversation.messages.map((message) => (
-                <MessageBubble key={message.id} message={message} accent={conversation.accent} themeColor={themeColor} />
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  accent={conversation.accent}
+                  themeColor={themeColor}
+                />
               ))
             )}
           </div>
@@ -109,7 +118,9 @@ function ChatHeader({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <div className="truncate text-base font-semibold text-slate-900">{conversation.name}</div>
+              <div className="truncate text-base font-semibold text-slate-900">
+                {conversation.name}
+              </div>
               {conversation.online ? (
                 <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
                   <span className="size-1.5 rounded-full bg-emerald-500" />

@@ -53,6 +53,10 @@ func (User) TableName() string { return "users" }
 	return
 }*/
 
+func SelectUserInfo(tx *gorm.DB) *gorm.DB {
+	return tx.Select("user_id", "username", "nickname", "face_url", "gender", "signature")
+}
+
 type UserEx struct {
 	City     string `json:"city"`
 	JobTitle string `json:"job_title"`

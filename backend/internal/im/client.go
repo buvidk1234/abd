@@ -2,6 +2,7 @@ package im
 
 import (
 	"backend/internal/api/apiresp"
+	"backend/pkg/util"
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,7 +26,7 @@ type Client struct {
 	req        *http.Request
 
 	PlatformID int
-	UserID     string
+	UserID     int64
 	IsCompress bool
 	Encoder
 
@@ -56,11 +57,17 @@ func (c *Client) ResetClient(respWriter http.ResponseWriter, req *http.Request, 
 	c.conn = conn
 	c.server = wsServer
 	// parse URL parameters
-	c.UserID = req.URL.Query().Get(WsUserID)
 	c.PlatformID, _ = strconv.Atoi(req.URL.Query().Get(PlatformID))
 	c.IsCompress = req.URL.Query().Get(Compression) == GzipCompressionProtocol
 	c.token = req.URL.Query().Get(Token)
-
+	var err error
+	c.UserID, err = util.ParseToken(c.token)
+	if err != nil {
+		log.Printf("ParseToken error: %v", err)
+		c.closedErr = err
+		c.close()
+		return
+	}
 	c.closed.Store(false)
 	c.hbCtx, c.hbCancel = context.WithCancel(req.Context())
 
@@ -157,10 +164,11 @@ func (c *Client) handleMessage(b []byte) error {
 		}
 	}
 
-	binaryReq := getReq()
+	binaryReq := getReq(c.token, c.UserID)
 	defer freeReq(binaryReq)
 
-	if err := c.Encoder.Decode(b, binaryReq); err != nil {
+	if err := c.Encoder.Decode(b, &binaryReq.InboundReq); err != nil {
+		log.Printf("Decode error: %v", err)
 		return err
 	}
 
@@ -205,9 +213,11 @@ func (c *Client) handleMessage(b []byte) error {
 	// 	resp, err = c.server.UserLogout(ctx, binaryReq)
 	// case WsSubUserOnlineStatus:
 	// 	resp, err = c.server.SubUserOnlineStatus(ctx, c, binaryReq)
+	case WSTest:
+		resp = "test success"
 	default:
 		return fmt.Errorf(
-			"ReqIdentifier failed,sendID:%s,msgIncr:%s,reqIdentifier:%d",
+			"ReqIdentifier failed,sendID:%d,msgIncr:%s,reqIdentifier:%d",
 			binaryReq.SendID,
 			binaryReq.MsgIncr,
 			binaryReq.ReqIdentifier,
@@ -291,11 +301,11 @@ func (c *Client) activeHeartbeat(ctx context.Context) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Printf("activeHeartbeat panic user=%s platform=%d: %v\n%s", c.UserID, c.PlatformID, r, debug.Stack())
+					log.Printf("activeHeartbeat panic user=%d platform=%d: %v\n%s", c.UserID, c.PlatformID, r, debug.Stack())
 				}
 			}()
 
-			log.Printf("server initiative send heartbeat start. user=%s platform=%d", c.UserID, c.PlatformID)
+			log.Printf("server initiative send heartbeat start. user=%d platform=%d", c.UserID, c.PlatformID)
 
 			ticker := time.NewTicker(pingPeriod)
 			defer ticker.Stop()

@@ -55,22 +55,20 @@ func ConvertToFriendRequestInfo(fr model.FriendRequest, fromUser model.User, toU
 }
 
 type FriendInfo struct {
-	OwnerUserID int64    `json:"ownerUserID,string"`
-	Remark      string   `json:"remark"`
-	CreatedAt   int64    `json:"createdAt"`
-	FriendUser  UserInfo `json:"friendUser"`
-	AddSource   int32    `json:"addSource"`
-	IsPinned    bool     `json:"isPinned"`
+	Remark     string   `json:"remark"`
+	CreatedAt  int64    `json:"createdAt"`
+	FriendUser UserInfo `json:"friendUser"`
+	AddSource  int32    `json:"addSource"`
+	IsPinned   bool     `json:"isPinned"`
 }
 
 func ConvertToFriendInfo(friend model.Friend, user model.User) FriendInfo {
 	return FriendInfo{
-		OwnerUserID: friend.OwnerUserID,
-		Remark:      friend.Remark,
-		CreatedAt:   friend.CreatedAt.Unix(),
-		FriendUser:  ConvertToUserInfo(user),
-		AddSource:   friend.AddSource,
-		IsPinned:    friend.IsPinned,
+		Remark:     friend.Remark,
+		CreatedAt:  friend.CreatedAt.Unix(),
+		FriendUser: ConvertToUserInfo(user),
+		AddSource:  friend.AddSource,
+		IsPinned:   friend.IsPinned,
 	}
 }
 

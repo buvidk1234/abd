@@ -3,17 +3,17 @@ import { toast } from 'sonner'
 
 import { AuthForm, type LoginFormValues } from './components/AuthForm'
 import { AuthLayout } from './components/AuthLayout'
-import { getUserInfo, login } from '@/services/api/user'
+import { login, getCurrentUser } from '@/modules/user'
 import { useUserStore } from '@/store/userStore'
 
 function LoginPage() {
   const navigate = useNavigate()
 
   const handleLogin = async (values: LoginFormValues) => {
-    const {data:token} = await login(values)
+    const token = await login(values)
 
     useUserStore.getState().setToken(token)
-    const {data:profile} = await getUserInfo()
+    const profile = await getCurrentUser()
     useUserStore.getState().setUser(profile)
     toast('登录成功')
     navigate('/')

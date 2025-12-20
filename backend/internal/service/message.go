@@ -204,19 +204,16 @@ func (s *MessageService) DeleteConversation(ctx context.Context, userID int64, c
 	return nil
 }
 
-type GetMaxSeqReq struct {
-	UserID int64 `json:"user_id,string"`
-}
 type GetMaxSeqResp struct {
 	MaxSeqs map[string]int64 `json:"max_seqs"`
 	MinSeqs map[string]int64 `json:"min_seqs"`
 }
 
-func (s *MessageService) GetMaxSeq(ctx context.Context, req GetMaxSeqReq) (GetMaxSeqResp, error) {
+func (s *MessageService) GetMaxSeq(ctx context.Context, userId int64) (GetMaxSeqResp, error) {
 
-	conversationIDs, err := redis.GetCache(cachekey.GetConversationIDsKey(strconv.FormatInt(req.UserID, 10)), func() ([]string, error) {
+	conversationIDs, err := redis.GetCache(cachekey.GetConversationIDsKey(strconv.FormatInt(userId, 10)), func() ([]string, error) {
 		var ids []string
-		if err := s.db.WithContext(ctx).Model(&model.Conversation{}).Where("owner_id = ?", req.UserID).Pluck("conversation_id", &ids).Error; err != nil {
+		if err := s.db.WithContext(ctx).Model(&model.Conversation{}).Where("owner_id = ?", userId).Pluck("conversation_id", &ids).Error; err != nil {
 			return nil, err
 		}
 		return ids, nil
@@ -260,7 +257,6 @@ type PullMsgs struct {
 }
 
 type PullMessageBySeqsReq struct {
-	UserID    int64       `json:"user_id,string"`
 	SeqRanges []*SeqRange `json:"seq_ranges"`
 	Order     PullOrder   `json:"order"`
 }
@@ -270,7 +266,7 @@ type PullMessageBySeqsResp struct {
 	NotificationMsgs map[string]*PullMsgs `json:"notification_msgs"`
 }
 
-func (s *MessageService) PullMessageBySeqs(ctx context.Context, req PullMessageBySeqsReq) (PullMessageBySeqsResp, error) {
+func (s *MessageService) PullMessageBySeqs(ctx context.Context, userId int64, req PullMessageBySeqsReq) (PullMessageBySeqsResp, error) {
 	resp := PullMessageBySeqsResp{
 		Msgs:             make(map[string]*PullMsgs),
 		NotificationMsgs: make(map[string]*PullMsgs),
@@ -278,9 +274,9 @@ func (s *MessageService) PullMessageBySeqs(ctx context.Context, req PullMessageB
 
 	for _, seqRange := range req.SeqRanges {
 		log.Printf("PullMessageBySeqs processing conversationID: %v, begin: %v, end: %v, num: %v", seqRange.ConversationID, seqRange.Begin, seqRange.End, seqRange.Num)
-		conversation, err := redis.GetCache(cachekey.GetConversationKey(strconv.FormatInt(req.UserID, 10), seqRange.ConversationID), func() (model.Conversation, error) {
+		conversation, err := redis.GetCache(cachekey.GetConversationKey(strconv.FormatInt(userId, 10), seqRange.ConversationID), func() (model.Conversation, error) {
 			var conv model.Conversation
-			if err := s.db.WithContext(ctx).Where("owner_id = ? AND conversation_id = ?", req.UserID, seqRange.ConversationID).First(&conv).Error; err != nil {
+			if err := s.db.WithContext(ctx).Where("owner_id = ? AND conversation_id = ?", userId, seqRange.ConversationID).First(&conv).Error; err != nil {
 				return model.Conversation{}, err
 			}
 			return conv, nil
@@ -289,7 +285,7 @@ func (s *MessageService) PullMessageBySeqs(ctx context.Context, req PullMessageB
 			log.Printf("PullMessageBySeqs get conversation error: %v, conversationID: %v", err, seqRange.ConversationID)
 			continue
 		}
-		minSeq, maxSeq, msgs, err := s.getMsgBySeqsRange(ctx, req.UserID, seqRange.ConversationID, seqRange.Begin, seqRange.End, seqRange.Num, conversation.MaxSeq)
+		minSeq, maxSeq, msgs, err := s.getMsgBySeqsRange(ctx, userId, seqRange.ConversationID, seqRange.Begin, seqRange.End, seqRange.Num, conversation.MaxSeq)
 		if err != nil {
 			log.Printf("PullMessageBySeqs get messages error: %v, conversationID: %v", err, seqRange.ConversationID)
 			continue
@@ -297,9 +293,9 @@ func (s *MessageService) PullMessageBySeqs(ctx context.Context, req PullMessageB
 		var isEnd bool
 		switch req.Order {
 		case PullOrderAsc:
-			isEnd = (maxSeq <= seqRange.End)
+			isEnd = maxSeq <= seqRange.End
 		case PullOrderDesc:
-			isEnd = (minSeq >= seqRange.Begin)
+			isEnd = minSeq >= seqRange.Begin
 		}
 		if len(msgs) == 0 {
 			log.Printf("PullMessageBySeqs no messages found, conversationID: %v, begin: %v, end: %v", seqRange.ConversationID, seqRange.Begin, seqRange.End)

@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 
 import { AuthForm, type RegisterFormValues } from './components/AuthForm'
 import { AuthLayout } from './components/AuthLayout'
-import { register } from '@/services/api/user'
+import { register } from '@/modules/user'
 
 function RegisterPage() {
   const navigate = useNavigate()

@@ -1,19 +1,18 @@
-import { ArrowLeft, Mail, MapPin, MessageCircle, Phone, ShieldCheck, Star, Tag } from 'lucide-react'
+import { ArrowLeft, MessageCircle, Phone, ShieldCheck, Star } from 'lucide-react'
 import { toast } from 'sonner'
 
-import type { ContactItem } from '../types'
-import { getStatusText } from '../utils'
-import { ActionButton, Avatar, Badge, IconButton } from './common'
+import { ActionButton, Avatar, Badge, IconButton } from '../common'
+import type { Friend } from '@/modules'
 
-interface ContactDetailProps {
+interface FriendDetailProps {
   themeColor: string
-  contact: ContactItem | null
+  friend: Friend
   isMobile: boolean
   onBack: () => void
 }
 
-export function ContactDetail({ themeColor, contact, isMobile, onBack }: ContactDetailProps) {
-  if (!contact) {
+export function FriendDetail({ themeColor, friend, isMobile, onBack }: FriendDetailProps) {
+  if (!friend) {
     return (
       <div className="flex min-w-0 flex-1 items-center justify-center bg-slate-50">
         <div className="text-center text-sm text-slate-500">选择联系人查看详情</div>
@@ -25,9 +24,13 @@ export function ContactDetail({ themeColor, contact, isMobile, onBack }: Contact
     <div className="flex min-w-0 flex-1 flex-col bg-slate-50">
       <div className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm md:px-6">
         <div className="flex items-center gap-3">
-          {isMobile && <IconButton icon={<ArrowLeft className="size-5" />} onClick={onBack} ariaLabel="返回" />}
+          {isMobile && (
+            <IconButton icon={<ArrowLeft className="size-5" />} onClick={onBack} ariaLabel="返回" />
+          )}
           <div className="text-base font-semibold text-slate-900">联系人信息</div>
-          <Badge variant="primary" size="sm">内部</Badge>
+          <Badge variant="primary" size="sm">
+            内部
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
           <ActionButton
@@ -49,25 +52,23 @@ export function ContactDetail({ themeColor, contact, isMobile, onBack }: Contact
         <div className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <Avatar
-              name={contact.name}
-              avatar={contact.avatar}
-              accent={contact.accent}
-              status={contact.status}
+              name={friend.friendUser.nickname}
+              avatar={friend.friendUser.avatar}
+              accent={themeColor}
+              status={'online'} // TODO: 根据好友状态显示
               themeColor={themeColor}
               size="xl"
             />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="truncate text-lg font-semibold text-slate-900">{contact.name}</div>
-                <Badge variant="default" size="md">{contact.title}</Badge>
-                {contact.status && (
-                  <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-600">
-                    <span className="size-1.5 rounded-full bg-emerald-500" />
-                    {getStatusText(contact.status)}
-                  </span>
-                )}
+                <div className="truncate text-lg font-semibold text-slate-900">
+                  {friend.friendUser.nickname}
+                </div>
+                <Badge variant="default" size="md">
+                  {friend.remark}
+                </Badge>
               </div>
-              <div className="text-sm text-slate-500">{contact.department}</div>
+              <div className="text-sm text-slate-500">{friend.friendUser.signature}</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -88,38 +89,37 @@ export function ContactDetail({ themeColor, contact, isMobile, onBack }: Contact
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        {/* TODO: other info */}
+        {/* <div className="grid gap-4 md:grid-cols-2">
           <InfoCard
             icon={<Mail className="size-4" />}
             label="邮箱"
-            value={contact.email}
+            value={friend.friendUser.email}
             themeColor={themeColor}
           />
           <InfoCard
             icon={<Phone className="size-4" />}
             label="电话"
-            value={contact.phone}
+            value={friend.phone}
             themeColor={themeColor}
           />
           <InfoCard
             icon={<MapPin className="size-4" />}
             label="地点"
-            value={contact.location || '远程/协作'}
+            value={friend.location || '远程/协作'}
             themeColor={themeColor}
           />
           <InfoCard
             icon={<Tag className="size-4" />}
             label="标签"
-            value={contact.tags?.join(' / ') || '暂无标签'}
+            value={friend.tags?.join(' / ') || '暂无标签'}
             themeColor={themeColor}
           />
-        </div>
+        </div> */}
 
         <div className="rounded-3xl border border-dashed border-slate-200 bg-white/60 p-5">
           <div className="text-sm font-semibold text-slate-900">备注</div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            {contact.note || '这里可以补充沟通习惯、时区或常用文档链接,帮助团队更快协作。'}
-          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{friend.remark}</p>
         </div>
       </div>
     </div>

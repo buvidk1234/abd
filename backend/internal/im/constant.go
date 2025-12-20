@@ -36,6 +36,7 @@ const (
 	WsSetBackgroundStatus = 2004
 	WsSubUserOnlineStatus = 2005
 	WSDataError           = 3001
+	WSTest                = 4001
 )
 
 const (

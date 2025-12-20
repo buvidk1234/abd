@@ -6,6 +6,7 @@ import (
 	"backend/internal/model"
 	"backend/pkg/util"
 	"context"
+	"errors"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -124,8 +125,11 @@ func (u *UserService) UpdateUserInfo(ctx context.Context, req UpdateUserInfoReq,
 }
 
 func (u *UserService) GetUsersPublicInfo(ctx context.Context, userId int64) (dto.UserInfo, error) {
-	var user = model.User{}
-	if err := u.db.WithContext(ctx).First(&user, "user_id = ?", userId).Error; err != nil {
+	user := model.User{UserID: userId}
+	if err := u.db.WithContext(ctx).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return dto.UserInfo{}, errs.ErrUserNotFound
+		}
 		return dto.UserInfo{}, err
 	}
 	return dto.ConvertToUserInfo(user), nil

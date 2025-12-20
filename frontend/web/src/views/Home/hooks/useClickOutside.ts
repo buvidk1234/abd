@@ -1,6 +1,16 @@
 import { useEffect, type RefObject } from 'react'
 
-export function useClickOutside(ref: RefObject<HTMLElement | null>, handler: () => void, enabled: boolean = true) {
+/**
+ * 点击外部区域关闭组件
+ * @param ref 组件引用
+ * @param handler 关闭回调
+ * @param enabled 是否启用
+ */
+export function useClickOutside(
+  ref: RefObject<HTMLElement | null>,
+  handler: () => void,
+  enabled: boolean = true
+) {
   useEffect(() => {
     if (!enabled) return
 

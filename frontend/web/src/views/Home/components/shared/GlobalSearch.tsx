@@ -1,20 +1,27 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { X } from 'lucide-react'
 import { useImmer } from 'use-immer'
 
-import type { ContactItem, ConversationItem } from '../types'
-import { filterContacts, filterConversations, formatUnreadCount } from '../utils'
-import { Avatar, Badge, IconButton } from './common'
+import type { FriendItem, ConversationItem } from '../../types'
+import { filterFriends, filterConversations, formatUnreadCount } from '../../utils'
+import { Avatar, Badge, IconButton } from '../common'
+import { useClickOutside } from '../../hooks'
 
 interface GlobalSearchProps {
   open: boolean
   conversations: ConversationItem[]
-  contacts: ContactItem[]
+  friends: FriendItem[]
   onClose: () => void
-  onSelect: (payload: { type: 'conversation' | 'contact'; id: string }) => void
+  onSelect: (payload: { type: 'conversation' | 'friend'; id: string }) => void
 }
 
-export function GlobalSearch({ open, conversations, contacts, onClose, onSelect }: GlobalSearchProps) {
+export function GlobalSearch({
+  open,
+  conversations,
+  friends,
+  onClose,
+  onSelect,
+}: GlobalSearchProps) {
   const [keyword, setKeyword] = useImmer<string>('')
 
   const filteredConversations = useMemo(
@@ -22,18 +29,18 @@ export function GlobalSearch({ open, conversations, contacts, onClose, onSelect 
     [conversations, keyword]
   )
 
-  const filteredContacts = useMemo(
-    () => filterContacts(contacts, keyword),
-    [contacts, keyword]
-  )
+  const filteredFriends = useMemo(() => filterFriends(friends, keyword), [friends, keyword])
 
-  const hasResult = filteredConversations.length > 0 || filteredContacts.length > 0
+  const hasResult = filteredConversations.length > 0 || filteredFriends.length > 0
+
+  const ref = useRef<HTMLDivElement>(null)
+  useClickOutside(ref, onClose, open)
 
   if (!open) return null
 
   return (
     <div className="fixed inset-0 z-30 flex items-start justify-center bg-black/30 p-4 backdrop-blur-sm">
-      <div className="mt-12 w-full max-w-4xl rounded-3xl bg-white p-6 shadow-2xl">
+      <div ref={ref} className="mt-12 w-full max-w-4xl rounded-3xl bg-white p-6 shadow-2xl">
         <div className="mb-4 flex items-center gap-3">
           <div className="flex flex-1 items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             <input
@@ -90,13 +97,13 @@ export function GlobalSearch({ open, conversations, contacts, onClose, onSelect 
                 </div>
               )}
 
-              {filteredContacts.length > 0 && (
+              {filteredFriends.length > 0 && (
                 <div className="space-y-2">
                   <div className="px-1 text-xs font-semibold uppercase text-slate-400">联系人</div>
-                  {filteredContacts.map((item) => (
+                  {filteredFriends.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => onSelect({ type: 'contact', id: item.id })}
+                      onClick={() => onSelect({ type: 'friend', id: item.id })}
                       className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 px-4 py-3 text-left transition hover:border-slate-200 hover:bg-slate-50"
                     >
                       <Avatar

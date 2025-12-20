@@ -25,7 +25,11 @@ const variantMap = {
 export function Badge({ children, variant = 'default', size = 'md', customColor }: BadgeProps) {
   return (
     <span
-      className={clsx('inline-flex items-center rounded-full font-semibold', sizeMap[size], variantMap[variant])}
+      className={clsx(
+        'inline-flex items-center rounded-full font-semibold',
+        sizeMap[size],
+        variantMap[variant]
+      )}
       style={customColor ? { backgroundColor: `${customColor}15`, color: customColor } : undefined}
     >
       {children}

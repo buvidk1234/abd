@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import { BellOff, CheckCircle, Pin, X } from 'lucide-react'
 
-import type { ConversationItem } from '../types'
-import { IconButton } from './common'
+import type { ConversationItem } from '../../types'
+import { IconButton } from '../common'
 
 interface ChannelPanelProps {
   themeColor: string
@@ -46,7 +46,9 @@ export function ChannelPanel({
           <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
             <div
               className="flex size-12 items-center justify-center rounded-2xl text-sm font-bold uppercase text-white shadow-sm"
-              style={{ background: `linear-gradient(145deg, ${conversation.accent}, ${themeColor})` }}
+              style={{
+                background: `linear-gradient(145deg, ${conversation.accent}, ${themeColor})`,
+              }}
             >
               {conversation.avatar}
             </div>

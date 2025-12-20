@@ -19,12 +19,21 @@ const loginSchema = z.object({
   password: z.string().min(1, '请输入密码'),
 })
 
+const emptyToUndefined = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v)
+
 const registerSchema = loginSchema
   .extend({
     confirmPassword: z.string().min(1, '请再次输入密码'),
-    nickname: z.string().trim().optional(),
-    phone: z.string().trim().optional(),
-    email: z.string().trim().email('邮箱格式不正确').optional(),
+
+    nickname: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+
+    phone: z
+      .preprocess(emptyToUndefined, z.string().trim().optional())
+      .refine((v) => !v || /^1[3-9]\d{9}$/.test(v), '手机号格式不正确'),
+
+    email: z
+      .preprocess(emptyToUndefined, z.string().trim().optional())
+      .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), '邮箱格式不正确'),
   })
   .refine((values) => values.password === values.confirmPassword, {
     path: ['confirmPassword'],

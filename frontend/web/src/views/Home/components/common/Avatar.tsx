@@ -1,13 +1,11 @@
 import clsx from 'clsx'
 
-import type { ContactItem } from '../../types'
-
 interface AvatarProps {
   name: string
   avatar?: string
-  accent: string
+  accent?: string
   size?: 'sm' | 'md' | 'lg' | 'xl'
-  status?: ContactItem['status']
+  status?: 'online' | 'busy' | 'away' | 'offline'
   online?: boolean
   muted?: boolean
   selected?: boolean

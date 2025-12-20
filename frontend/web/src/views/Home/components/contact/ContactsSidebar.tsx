@@ -1,16 +1,16 @@
 import { useMemo } from 'react'
 import clsx from 'clsx'
-import { Search } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { useImmer } from 'use-immer'
 
-import type { ContactItem } from '../types'
-import { SPECIAL_KEYS } from '../constants'
-import { filterContacts, groupContactsByInitial } from '../utils'
-import { Avatar, Badge } from './common'
+import { SPECIAL_KEYS } from '../../constants'
+import { filterFriends, groupFriendsByInitial } from '../../utils'
+import { Avatar, Badge, IconButton } from '../common'
+import type { Friend } from '@/modules'
 
 interface ContactsSidebarProps {
   themeColor: string
-  contacts: ContactItem[]
+  friends: Friend[]
   selectedId: string | null
   onSelect: (id: string) => void
   onSelectSpecial: (key: string) => void
@@ -21,26 +21,30 @@ interface ContactsSidebarProps {
   }
   showSidebar: boolean
   isMobile: boolean
+  onOpenAddDialog: () => void
 }
 
 export function ContactsSidebar({
-  themeColor,
-  contacts,
-  selectedId,
-  onSelect,
-  onSelectSpecial,
-  specialCounts,
-  showSidebar,
-  isMobile,
+  themeColor, // 主题颜色
+  friends, // 联系人
+  selectedId, // 选中联系人ID
+  onSelect, // 选择联系人
+  onSelectSpecial, // 选择特殊联系人
+  specialCounts, // 特殊联系人数量
+  showSidebar, // 是否显示侧边栏
+  isMobile, // 是否是移动端
+  onOpenAddDialog, // 打开添加联系人对话框
 }: ContactsSidebarProps) {
-  const [keywordState, setKeywordState] = useImmer<{ keyword: string }>({ keyword: '' })
+  const [state, setState] = useImmer<{ keyword: string }>({
+    keyword: '',
+  })
 
   const filteredContacts = useMemo(
-    () => filterContacts(contacts, keywordState.keyword),
-    [contacts, keywordState.keyword]
+    () => filterFriends(friends, state.keyword),
+    [friends, state.keyword]
   )
 
-  const grouped = useMemo(() => groupContactsByInitial(filteredContacts), [filteredContacts])
+  const grouped = useMemo(() => groupFriendsByInitial(filteredContacts), [filteredContacts])
 
   return (
     <div
@@ -49,25 +53,33 @@ export function ContactsSidebar({
         showSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       )}
     >
+      {/* 标题 */}
       <div className="flex h-16 items-center justify-between px-5">
         <div className="leading-tight">
           <div className="text-lg font-semibold text-slate-900">通讯录</div>
-          <div className="text-xs text-slate-500">常用联系人在这里</div>
         </div>
         <div className="hidden items-center gap-2 md:flex">
-          <Badge variant="primary" size="md">{contacts.length} 人</Badge>
+          <Badge variant="primary" size="md">
+            {friends.length} 人
+          </Badge>
+          <IconButton
+            icon={<Plus className="size-5" />}
+            ariaLabel="添加联系人"
+            onClick={() => onOpenAddDialog()}
+          />
         </div>
       </div>
 
       <div className="px-4 pb-2">
+        {/* 搜索框 */}
         <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
           <Search className="size-4 text-slate-400" />
           <input
             className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
             placeholder="搜索姓名、部门、标签"
-            value={keywordState.keyword}
+            value={state.keyword}
             onChange={(e) =>
-              setKeywordState((draft) => {
+              setState((draft) => {
                 draft.keyword = e.target.value
               })
             }
@@ -77,6 +89,7 @@ export function ContactsSidebar({
 
       <div className="space-y-3 px-4">
         <div className="grid grid-cols-2 gap-3">
+          {/* 入口卡片 */}
           <QuickCard
             title="新的朋友"
             badge={specialCounts.newFriends > 0 ? `${specialCounts.newFriends}` : undefined}
@@ -99,13 +112,13 @@ export function ContactsSidebar({
             onClick={() => onSelectSpecial(SPECIAL_KEYS.blacklist)}
           />
           <QuickCard
-            title="常用联系人"
-            badge={`${contacts.length}`}
+            title="联系人"
+            badge={`${friends.length}`}
             accent="#22c55e"
             active={!selectedId || !selectedId.startsWith('special:')}
             onClick={() => {
-              if (contacts.length > 0) {
-                onSelect(contacts[0].id)
+              if (friends.length > 0) {
+                onSelect(friends[0].friendUser.id)
               }
             }}
           />
@@ -118,74 +131,63 @@ export function ContactsSidebar({
             没有匹配的联系人
           </div>
         ) : (
+          // 联系人列表
           grouped.map(([key, list]) => (
             <div key={key} className="mb-4">
               <div className="px-4 pb-2 text-xs font-semibold uppercase text-slate-400">{key}</div>
               <div className="space-y-2">
                 {list.map((contact) => (
                   <button
-                    key={contact.id}
-                    onClick={() => onSelect(contact.id)}
+                    key={contact.friendUser.id}
+                    onClick={() => onSelect(contact.friendUser.id)}
                     className={clsx(
                       'flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition',
-                      selectedId === contact.id
+                      selectedId === contact.friendUser.id
                         ? 'bg-[#e46342] text-white shadow-[0_10px_30px_rgba(228,99,66,0.18)]'
                         : 'hover:bg-slate-50'
                     )}
                   >
                     <Avatar
-                      name={contact.name}
-                      avatar={contact.avatar}
-                      accent={contact.accent}
-                      status={contact.status}
-                      selected={selectedId === contact.id}
+                      name={contact.friendUser.nickname}
+                      avatar={contact.friendUser.avatar}
+                      accent={themeColor}
+                      selected={selectedId === contact.friendUser.id}
                       themeColor={themeColor}
                       size="md"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <div className="truncate text-sm font-semibold">{contact.name}</div>
+                        <div className="truncate text-sm font-semibold">
+                          {contact.friendUser.nickname}
+                        </div>
                         <span
                           className={clsx(
                             'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                            selectedId === contact.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                            selectedId === contact.friendUser.id
+                              ? 'bg-white/20 text-white'
+                              : 'bg-slate-100 text-slate-600'
                           )}
                         >
-                          {contact.title}
+                          {contact.remark}
                         </span>
                       </div>
                       <div
                         className={clsx(
                           'truncate text-xs',
-                          selectedId === contact.id ? 'text-white/80' : 'text-slate-500'
+                          selectedId === contact.friendUser.id ? 'text-white/80' : 'text-slate-500'
                         )}
                       >
-                        {contact.department}
+                        {contact.friendUser.signature}
                       </div>
-                      {contact.tags && contact.tags.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {contact.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className={clsx(
-                                'rounded-full px-2 py-0.5 text-[10px]',
-                                selectedId === contact.id ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-600'
-                              )}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
                     {!isMobile && (
                       <span
                         className={clsx(
                           'text-[11px] font-semibold',
-                          selectedId === contact.id ? 'text-white/80' : 'text-slate-400'
+                          selectedId === contact.friendUser.id ? 'text-white/80' : 'text-slate-400'
                         )}
                       >
-                        {contact.location || '在线协作'}
+                        {contact.friendUser.signature}
                       </span>
                     )}
                   </button>

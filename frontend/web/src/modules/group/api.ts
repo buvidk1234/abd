@@ -1,6 +1,15 @@
+/**
+ * Infrastructure Layer: Group API calls
+ * - Only handles "how to request"
+ * - Returns backend DTOs
+ * - No business logic conversion, no UI logic
+ */
+
 import { http } from '@/lib/http'
 
-export interface GroupInfo {
+// ============ DTOs (Backend Response Types) ============
+
+export interface GroupInfoDTO {
   id: number
   groupName: string
   avatarURL: string
@@ -14,7 +23,7 @@ export interface GroupInfo {
   applyMemberFriend: number
 }
 
-export interface GroupMemberInfo {
+export interface GroupMemberInfoDTO {
   id: number
   groupID: string
   userID: string
@@ -23,6 +32,8 @@ export interface GroupMemberInfo {
   roleLevel: number
   joinedAt: string
 }
+
+// ============ Request/Response Types ============
 
 export interface CreateGroupReq {
   groupName: string
@@ -43,11 +54,11 @@ export interface GetGroupsInfoParams {
 }
 
 export interface GetGroupsInfoResp {
-  groupInfos: GroupInfo[]
+  groupInfos: GroupInfoDTO[]
 }
 
 export interface GetGroupMemberListResp {
-  memberList: GroupMemberInfo[]
+  memberList: GroupMemberInfoDTO[]
 }
 
 export interface JoinGroupReq {
@@ -88,47 +99,38 @@ export interface SetGroupMemberInfoReq {
   roleLevel?: number
 }
 
-export const createGroup = (data: CreateGroupReq) => {
-  return http.post<CreateGroupResp>('/groups', data)
-}
+// ============ API Functions ============
 
-export const getGroupsInfo = (params?: GetGroupsInfoParams) => {
+export const createGroupApi = (data: CreateGroupReq) => http.post<CreateGroupResp>('/groups', data)
+
+export const getGroupsInfoApi = (params?: GetGroupsInfoParams) => {
   const query = params?.ids?.length ? { ids: params.ids.join(',') } : undefined
   return http.get<GetGroupsInfoResp>('/groups', { params: query })
 }
 
-export const getGroupMemberList = (groupID: string) => {
-  return http.get<GetGroupMemberListResp>(`/groups/${groupID}/members`)
-}
+export const getGroupMemberListApi = (groupID: string) =>
+  http.get<GetGroupMemberListResp>(`/groups/${groupID}/members`)
 
-export const joinGroup = (groupID: string, data: JoinGroupReq) => {
-  return http.post<JoinGroupResp>(`/groups/${groupID}/join`, data)
-}
+export const joinGroupApi = (groupID: string, data: JoinGroupReq) =>
+  http.post<JoinGroupResp>(`/groups/${groupID}/join`, data)
 
-export const quitGroup = (groupID: string, userID: string) => {
-  return http.delete<CommonMsgResp>(`/groups/${groupID}/members/${userID}`, { data: {} })
-}
+export const quitGroupApi = (groupID: string, userID: string) =>
+  http.delete<CommonMsgResp>(`/groups/${groupID}/members/${userID}`, { data: {} })
 
-export const inviteUserToGroup = (groupID: string, data: InviteUserToGroupReq) => {
-  return http.post<InviteUserToGroupResp>(`/groups/${groupID}/invitations`, data)
-}
+export const inviteUserToGroupApi = (groupID: string, data: InviteUserToGroupReq) =>
+  http.post<InviteUserToGroupResp>(`/groups/${groupID}/invitations`, data)
 
-export const kickGroupMember = (groupID: string, userID: string) => {
-  return http.delete<CommonMsgResp>(`/groups/${groupID}/members/${userID}/kick`, { data: {} })
-}
+export const kickGroupMemberApi = (groupID: string, userID: string) =>
+  http.delete<CommonMsgResp>(`/groups/${groupID}/members/${userID}/kick`, { data: {} })
 
-export const dismissGroup = (groupID: string) => {
-  return http.delete<CommonMsgResp>(`/groups/${groupID}`, { data: {} })
-}
+export const dismissGroupApi = (groupID: string) =>
+  http.delete<CommonMsgResp>(`/groups/${groupID}`, { data: {} })
 
-export const setGroupInfo = (groupID: string, data: SetGroupInfoReq) => {
-  return http.post<CommonMsgResp>(`/groups/${groupID}`, data)
-}
+export const setGroupInfoApi = (groupID: string, data: SetGroupInfoReq) =>
+  http.post<CommonMsgResp>(`/groups/${groupID}`, data)
 
-export const setGroupMemberInfo = (
+export const setGroupMemberInfoApi = (
   groupID: string,
   userID: string,
   data: SetGroupMemberInfoReq
-) => {
-  return http.post<CommonMsgResp>(`/groups/${groupID}/members/${userID}`, data)
-}
+) => http.post<CommonMsgResp>(`/groups/${groupID}/members/${userID}`, data)

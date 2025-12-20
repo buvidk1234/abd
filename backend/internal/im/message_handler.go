@@ -21,12 +21,16 @@ type TextMessage struct {
 	Body json.RawMessage `json:"body"`
 }
 
-type Req struct {
+type InboundReq struct {
 	ReqIdentifier int32           `json:"req_identifier" validate:"required"`
-	Token         string          `json:"token"`
-	SendID        string          `json:"send_id"`
 	MsgIncr       string          `json:"msg_incr"`
 	Data          json.RawMessage `json:"data"`
+}
+
+type Req struct {
+	InboundReq
+	Token  string
+	SendID int64
 }
 
 var reqPool = sync.Pool{
@@ -35,13 +39,13 @@ var reqPool = sync.Pool{
 	},
 }
 
-func getReq() *Req {
+func getReq(token string, sendId int64) *Req {
 	req := reqPool.Get().(*Req)
 	req.Data = nil
 	req.MsgIncr = ""
 	req.ReqIdentifier = 0
-	req.SendID = ""
-	req.Token = ""
+	req.SendID = sendId
+	req.Token = token
 	return req
 }
 func freeReq(req *Req) {
@@ -87,12 +91,8 @@ func NewServiceHandler(messageService *service.MessageService, producer sarama.S
 }
 
 func (s *ServiceHandler) GetSeq(ctx context.Context, data *Req) (any, error) {
-	var getSeqReq service.GetMaxSeqReq
-	if err := json.Unmarshal(data.Data, &getSeqReq); err != nil {
-		return nil, err
-	}
-	log.Printf("GetSeq request: %+v", getSeqReq)
-	resp, err := s.messageService.GetMaxSeq(ctx, getSeqReq)
+	log.Printf("GetSeq request: %d", data.SendID)
+	resp, err := s.messageService.GetMaxSeq(ctx, data.SendID)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (s *ServiceHandler) PullMessageBySeqList(ctx context.Context, data *Req) (a
 		return nil, err
 	}
 	log.Printf("PullMessageBySeqList request: %+v", pullReq)
-	resp, err := s.messageService.PullMessageBySeqs(ctx, pullReq)
+	resp, err := s.messageService.PullMessageBySeqs(ctx, data.SendID, pullReq)
 	if err != nil {
 		return nil, err
 	}

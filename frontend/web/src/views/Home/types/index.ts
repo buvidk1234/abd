@@ -34,7 +34,7 @@ export interface ChatMenuItem {
   accent: string
 }
 
-export interface ContactItem {
+export interface FriendItem {
   id: string
   name: string
   title: string

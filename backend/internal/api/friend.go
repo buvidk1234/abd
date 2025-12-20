@@ -24,8 +24,7 @@ func (f *FriendApi) ApplyToAddFriend(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.FromUserID = c.GetInt64("user_id")
-	err := f.friendService.ApplyToAddFriend(c.Request.Context(), req)
+	err := f.friendService.ApplyToAddFriend(c.Request.Context(), c.GetInt64("user_id"), req)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -40,8 +39,7 @@ func (f *FriendApi) RespondFriendApply(c *gin.Context) {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.HandlerUserID = c.GetInt64("user_id")
-	err := f.friendService.RespondFriendApply(c.Request.Context(), req)
+	err := f.friendService.RespondFriendApply(c.Request.Context(), req, c.GetInt64("user_id"))
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -98,13 +96,12 @@ func (f *FriendApi) DeleteFriend(c *gin.Context) {
 
 // 获取收到的好友申请列表
 func (f *FriendApi) GetFriendApplyList(c *gin.Context) {
-	var req service.GetPaginationFriendApplyListReq
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var req service.GetPaginationFriendApplyListParams
+	if err := c.ShouldBindQuery(&req); err != nil {
 		apiresp.GinError(c, errs.ErrInvalidParam)
 		return
 	}
-	req.ToUserID = c.GetInt64("user_id")
-	resp, err := f.friendService.GetPaginationFriendApplyList(c.Request.Context(), req)
+	resp, err := f.friendService.GetPaginationFriendApplyList(c.Request.Context(), c.GetInt64("user_id"), req)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
@@ -173,4 +170,20 @@ func (f *FriendApi) GetPaginationBlacks(c *gin.Context) {
 		return
 	}
 	apiresp.GinSuccess(c, resp)
+}
+
+// 搜索好友
+func (f *FriendApi) SearchFriend(c *gin.Context) {
+	id := c.Query("id") // 搜索的用户 id
+	searchId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		apiresp.GinError(c, errs.ErrInvalidParam)
+		return
+	}
+	friendInfo, err := f.friendService.GetSearchedFriendInfo(c.Request.Context(), searchId)
+	if err != nil {
+		apiresp.GinError(c, err)
+		return
+	}
+	apiresp.GinSuccess(c, friendInfo)
 }

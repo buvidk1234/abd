@@ -2,13 +2,13 @@ import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import { MessageCircle, Settings, Users } from 'lucide-react'
 
-import { getInitials } from '../utils'
+import { getInitials } from '../../utils'
 
 interface NavRailProps {
   themeColor: string
-  activeTab: 'chat' | 'contacts'
+  activeTab: 'chat' | 'friends'
   userName: string
-  onSelectTab: (tab: 'chat' | 'contacts') => void
+  onSelectTab: (tab: 'chat' | 'friends') => void
   onOpenSettings: () => void
 }
 
@@ -44,10 +44,10 @@ export function NavRail({
         />
         <NavButton
           label="通讯录"
-          active={activeTab === 'contacts'}
+          active={activeTab === 'friends'}
           themeColor={themeColor}
           icon={<Users className="size-5" />}
-          onClick={() => onSelectTab('contacts')}
+          onClick={() => onSelectTab('friends')}
         />
       </div>
 
@@ -84,7 +84,9 @@ function NavButton({
         'flex size-12 flex-col items-center justify-center rounded-2xl text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700',
         active ? 'bg-slate-900 text-white shadow-[0_10px_30px_rgba(0,0,0,0.15)]' : ''
       )}
-      style={active ? { background: themeColor, boxShadow: `0 10px 30px ${themeColor}44` } : undefined}
+      style={
+        active ? { background: themeColor, boxShadow: `0 10px 30px ${themeColor}44` } : undefined
+      }
     >
       <span className="flex items-center justify-center">{icon}</span>
       <span className="mt-1 leading-none">{label}</span>

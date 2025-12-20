@@ -44,30 +44,27 @@ func (p *Pusher) PushMessageToUser() error {
 		log.Printf("Push message to users: %+v", msg)
 		switch msg.ConvType {
 		case constant.SingleChatType:
-			targetIDStr := strconv.FormatInt(msg.TargetID, 10)
-			clients, have := p.wsServer.Clients.GetAll(targetIDStr)
+			clients, have := p.wsServer.Clients.GetAll(msg.TargetID)
 			if !have {
 				return nil
 			}
 			for _, client := range clients {
 				if err := client.PushMessage(context.Background(), msg); err != nil {
-					log.Printf("push message to user %s failed: %v", targetIDStr, err)
+					log.Printf("push message to user %d failed: %v", msg.TargetID, err)
 				}
 			}
 		case constant.GroupChatType:
 			log.Printf("[push] group message push not implemented")
-			targetIDStr := strconv.FormatInt(msg.TargetID, 10)
-			memberInfos, _ := p.group.GetGroupMemberList(context.Background(), targetIDStr)
+			memberInfos, _ := p.group.GetGroupMemberList(context.Background(), strconv.FormatInt(msg.TargetID, 10))
 			for _, member := range memberInfos {
 				memberID := member.UserID
-				memberIDStr := strconv.FormatInt(memberID, 10)
-				clients, have := p.wsServer.Clients.GetAll(memberIDStr)
+				clients, have := p.wsServer.Clients.GetAll(memberID)
 				if !have {
 					continue
 				}
 				for _, client := range clients {
 					if err := client.PushMessage(context.Background(), msg); err != nil {
-						log.Printf("push message to user %s failed: %v", memberIDStr, err)
+						log.Printf("push message to user %d failed: %v", memberID, err)
 					}
 				}
 			}

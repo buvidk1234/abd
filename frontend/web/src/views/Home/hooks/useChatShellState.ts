@@ -3,28 +3,28 @@ import { useImmer } from 'use-immer'
 
 import type {
   BlacklistItem,
-  ContactItem,
+  FriendItem,
   ConversationItem,
   FriendRequestItem,
   SavedGroupItem,
 } from '../types'
 import {
   createBlacklist,
-  createContacts,
+  createFriends,
   createConversations,
   createNewFriends,
   createSavedGroups,
 } from '../utils/mockData'
 
 interface ChatShellState {
-  activeTab: 'chat' | 'contacts'
+  activeTab: 'chat' | 'friends'
   conversations: ConversationItem[]
-  contacts: ContactItem[]
+  friends: FriendItem[]
   newFriends: FriendRequestItem[]
   savedGroups: SavedGroupItem[]
   blacklist: BlacklistItem[]
   selectedConversationId: string | null
-  selectedContactId: string | null
+  selectedFriendId: string | null
   showAddMenu: boolean
   showGlobalSearch: boolean
   showDetails: boolean
@@ -35,16 +35,16 @@ interface ChatShellState {
 export function useChatShellState(isMobile: boolean) {
   const [state, setState] = useImmer<ChatShellState>(() => {
     const conversations = createConversations()
-    const contacts = createContacts()
+    const friends = createFriends()
     return {
       activeTab: 'chat',
       conversations,
-      contacts,
+      friends: friends,
       newFriends: createNewFriends(),
       savedGroups: createSavedGroups(),
       blacklist: createBlacklist(),
       selectedConversationId: conversations[0]?.id ?? null,
-      selectedContactId: contacts[0]?.id ?? null,
+      selectedFriendId: friends[0]?.id ?? null,
       showAddMenu: false,
       showGlobalSearch: false,
       showDetails: false,
@@ -68,13 +68,13 @@ export function useChatShellState(isMobile: boolean) {
     [state.conversations, state.selectedConversationId]
   )
 
-  const selectedContact = useMemo(
-    () => state.contacts.find((item) => item.id === state.selectedContactId) ?? null,
-    [state.contacts, state.selectedContactId]
+  const selectedFriend = useMemo(
+    () => state.friends.find((item) => item.id === state.selectedFriendId) ?? null,
+    [state.friends, state.selectedFriendId]
   )
 
   const actions = {
-    setActiveTab: (tab: 'chat' | 'contacts') => {
+    setActiveTab: (tab: 'chat' | 'friends') => {
       setState((draft) => {
         draft.activeTab = tab
         draft.showSidebarOnMobile = true
@@ -93,10 +93,10 @@ export function useChatShellState(isMobile: boolean) {
       })
     },
 
-    selectContact: (id: string) => {
+    selectFriend: (id: string) => {
       setState((draft) => {
-        draft.activeTab = 'contacts'
-        draft.selectedContactId = id
+        draft.activeTab = 'friends'
+        draft.selectedFriendId = id
         if (draft.isMobile) {
           draft.showSidebarOnMobile = false
         }
@@ -188,7 +188,7 @@ export function useChatShellState(isMobile: boolean) {
   return {
     state,
     selectedConversation,
-    selectedContact,
+    selectedFriend,
     actions,
   }
 }

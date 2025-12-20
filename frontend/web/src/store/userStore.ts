@@ -1,4 +1,4 @@
-import type { UserInfo } from '@/services/api/user'
+import type { User } from '@/modules/user'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
@@ -8,23 +8,23 @@ interface UserState {
   setToken: (token: string) => void
   clearToken: () => void
   getToken: () => string
-  user: UserInfo
-  setUser: (user: UserInfo) => void
+  user: User
+  setUser: (user: User) => void
   clearUser: () => void
-  getUser: () => UserInfo
+  getUser: () => User
 }
 
 export const useUserStore = create<UserState>()(
   immer(
     persist(
       (set, get) => ({
-        user: {} as UserInfo,
+        user: {} as User,
         token: '',
         setToken: (token: string) => set({ token }),
         clearToken: () => set({ token: '' }),
         getToken: () => get().token,
-        setUser: (user: UserInfo) => set({ user }),
-        clearUser: () => set({ user: {} as UserInfo }),
+        setUser: (user: User) => set({ user }),
+        clearUser: () => set({ user: {} as User }),
         getUser: () => get().user,
       }),
       {

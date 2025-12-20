@@ -30,8 +30,9 @@ func NewGinRouter() *gin.Engine {
 		ExposeHeaders: []string{"Content-Length"},
 		MaxAge:        12 * time.Hour,
 	}))
-	u := NewUserApi(service.NewUserService(database.GetDB()))
-	f := NewFriendApi(service.NewFriendService(database.GetDB()))
+	userService := service.NewUserService(database.GetDB())
+	u := NewUserApi(userService)
+	f := NewFriendApi(service.NewFriendService(database.GetDB(), userService))
 	g := NewGroupApi(service.NewGroupService(database.GetDB()))
 	m := NewMessageApi(service.NewMessageService(database.GetDB()))
 
@@ -52,6 +53,7 @@ func NewGinRouter() *gin.Engine {
 
 		friendRouterGroup := auth.Group("/friend")
 		{
+			friendRouterGroup.GET("/search", f.SearchFriend)
 			friendRouterGroup.POST("/add", f.ApplyToAddFriend)
 			friendRouterGroup.POST("/add-response", f.RespondFriendApply)
 			friendRouterGroup.GET("/", f.GetFriendList)
@@ -60,7 +62,7 @@ func NewGinRouter() *gin.Engine {
 			friendRouterGroup.DELETE("/:friendId", f.DeleteFriend)
 			friendRouterGroup.POST("/add_black", f.AddBlack)
 			friendRouterGroup.POST("/remove_black", f.RemoveBlack)
-			friendRouterGroup.POST("/get_friend_apply_list", f.GetFriendApplyList)
+			friendRouterGroup.GET("/apply", f.GetFriendApplyList)
 			friendRouterGroup.POST("/get_self_friend_apply_list", f.GetSelfApplyList)
 		}
 

@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type FriendRequest struct {
@@ -16,10 +18,26 @@ type FriendRequest struct {
 	HandleMsg     string    `gorm:"column:handle_msg;type:varchar(255);comment:处理消息" json:"handleMsg"`
 	HandledAt     time.Time `gorm:"column:handled_at" json:"handledAt"`
 	Ex            string    `gorm:"column:ex;type:text;comment:扩展字段" json:"ex"`
+	FromUser      User      `gorm:"foreignKey:FromUserID;references:UserID"`
+	ToUser        User      `gorm:"foreignKey:ToUserID;references:UserID"`
 }
 
 func (FriendRequest) TableName() string {
 	return "friend_requests"
+}
+
+func SelectFriendRequestInfo(tx *gorm.DB) *gorm.DB {
+	return tx.Select(
+		"id",
+		"from_user_id",
+		"to_user_id",
+		"handle_result",
+		"req_msg",
+		"created_at",
+		"updated_at",
+		"handle_msg",
+		"handled_at",
+	)
 }
 
 type Friend struct {
@@ -33,6 +51,12 @@ type Friend struct {
 	OperatorUserID int64     `gorm:"column:operator_user_id;comment:操作人" json:"operatorUserID,string"`
 	Ex             string    `gorm:"column:ex;type:text" json:"ex"`
 	IsPinned       bool      `gorm:"column:is_pinned;default:false;comment:是否置顶" json:"isPinned"`
+	OwnerUser      User      `gorm:"foreignKey:OwnerUserID;references:UserID"`
+	FriendUser     User      `gorm:"foreignKey:FriendUserID;references:UserID"`
+}
+
+func SelectFriendInfo(tx *gorm.DB) *gorm.DB {
+	return tx.Select("id", "owner_user_id", "friend_user_id", "remark", "created_at", "add_source", "is_pinned")
 }
 
 // TableName 指定表名

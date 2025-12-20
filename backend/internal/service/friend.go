@@ -9,23 +9,23 @@ import (
 )
 
 type FriendService struct {
-	db *gorm.DB
+	db          *gorm.DB
+	userService *UserService
 }
 
-func NewFriendService(db *gorm.DB) *FriendService {
-	return &FriendService{db: db}
+func NewFriendService(db *gorm.DB, userService *UserService) *FriendService {
+	return &FriendService{db: db, userService: userService}
 }
 
 // 申请添加好友
 type ApplyToAddFriendReq struct {
-	FromUserID int64
-	ToUserID   int64  `json:"toUserID,string" binding:"required"`
-	ReqMsg     string `json:"message"`
+	ToUserID int64  `json:"toUserID,string" binding:"required"`
+	ReqMsg   string `json:"message"`
 }
 
-func (s *FriendService) ApplyToAddFriend(ctx context.Context, req ApplyToAddFriendReq) error {
+func (s *FriendService) ApplyToAddFriend(ctx context.Context, userId int64, req ApplyToAddFriendReq) error {
 	s.db.WithContext(ctx).Create(&model.FriendRequest{
-		FromUserID: req.FromUserID,
+		FromUserID: userId,
 		ToUserID:   req.ToUserID,
 		ReqMsg:     req.ReqMsg,
 	})
@@ -33,14 +33,13 @@ func (s *FriendService) ApplyToAddFriend(ctx context.Context, req ApplyToAddFrie
 }
 
 type RespondFriendApplyReq struct {
-	ID            int64 `json:"id,string" binding:"required"`
-	HandlerUserID int64
-	HandleResult  int32  `json:"handleResult" binding:"required"`
-	HandleMsg     string `json:"handleMsg"`
+	ID           int64  `json:"id,string" binding:"required"`
+	HandleResult int32  `json:"handleResult" binding:"required"`
+	HandleMsg    string `json:"handleMsg"`
 }
 
 // 响应好友申请
-func (s *FriendService) RespondFriendApply(ctx context.Context, req RespondFriendApplyReq) error {
+func (s *FriendService) RespondFriendApply(ctx context.Context, req RespondFriendApplyReq, userId int64) error {
 	// 查找好友请求
 	var fr model.FriendRequest
 	if err := s.db.WithContext(ctx).First(&fr, req.ID).Error; err != nil {
@@ -49,7 +48,7 @@ func (s *FriendService) RespondFriendApply(ctx context.Context, req RespondFrien
 	// 更新处理结果
 	updateStruct := model.FriendRequest{
 		HandleResult:  req.HandleResult,
-		HandlerUserID: req.HandlerUserID,
+		HandlerUserID: userId,
 		HandleMsg:     req.HandleMsg,
 		HandledAt:     s.db.NowFunc(),
 	}
@@ -71,60 +70,48 @@ func (s *FriendService) RespondFriendApply(ctx context.Context, req RespondFrien
 }
 
 type GetPaginationFriendsReq struct {
-	Page     int `json:"page"`
-	PageSize int `json:"pageSize"`
-}
-
-type GetFriendListResp struct {
-	Friends  []dto.FriendInfo `json:"friends"`
-	Total    int              `json:"total"`
-	Page     int              `json:"page"`
-	PageSize int              `json:"pageSize"`
+	PagedParams
 }
 
 // 获取好友列表
-func (s *FriendService) GetPaginationFriends(ctx context.Context, params GetPaginationFriendsReq, userId int64) (GetFriendListResp, error) {
-	// 默认值处理
-	if params.Page <= 0 {
-		params.Page = 1
-	}
-	if params.PageSize <= 0 {
-		params.PageSize = 10
-	}
-
+func (s *FriendService) GetPaginationFriends(ctx context.Context, params GetPaginationFriendsReq, userId int64) (PagedResp[dto.FriendInfo], error) {
+	base := s.db.WithContext(ctx).Model(&model.Friend{}).Where("owner_user_id = ?", userId)
 	var total int64
-	var friends []model.Friend
-	db := s.db.WithContext(ctx).Model(&model.Friend{}).Where("owner_user_id = ?", userId)
-	db.Count(&total)
-	db = db.Offset((params.Page - 1) * params.PageSize).Limit(params.PageSize)
-	if err := db.Find(&friends).Error; err != nil {
-		return GetFriendListResp{}, err
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return PagedResp[dto.FriendInfo]{}, err
 	}
 
-	// 批量查好友用户信息
-	friendIDs := make([]int64, 0, len(friends))
+	page := params.Page
+	pageSize := params.PageSize
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	offset := (page - 1) * pageSize
+
+	var friends []model.Friend
+	err := base.Session(&gorm.Session{}).
+		Scopes(model.SelectFriendInfo).
+		Preload("FriendUser", model.SelectUserInfo).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&friends).Error
+	if err != nil {
+		return PagedResp[dto.FriendInfo]{}, err
+	}
+
+	friendInfos := make([]dto.FriendInfo, 0, len(friends))
 	for _, f := range friends {
-		friendIDs = append(friendIDs, f.FriendUserID)
+		friendInfos = append(friendInfos, dto.ConvertToFriendInfo(f, f.FriendUser))
 	}
-	var users []model.User
-	if len(friendIDs) > 0 {
-		if err := s.db.WithContext(ctx).Where("user_id IN ?", friendIDs).Find(&users).Error; err != nil {
-			return GetFriendListResp{}, err
-		}
-	}
-	userMap := make(map[int64]model.User)
-	for _, user := range users {
-		userMap[user.UserID] = user
-	}
-	var friendInfos []dto.FriendInfo
-	for _, f := range friends {
-		friendInfos = append(friendInfos, dto.ConvertToFriendInfo(f, userMap[f.FriendUserID]))
-	}
-	return GetFriendListResp{
-		Friends:  friendInfos,
+	return PagedResp[dto.FriendInfo]{
+		Page:     page,
 		Total:    int(total),
-		Page:     params.Page,
-		PageSize: params.PageSize,
+		PageSize: pageSize,
+		Data:     friendInfos,
 	}, nil
 }
 
@@ -157,59 +144,51 @@ func (s *FriendService) DeleteFriend(ctx context.Context, ownerUserID int64, fri
 	return nil
 }
 
-type GetPaginationFriendApplyListReq struct {
-	Page     int `json:"page"`
-	PageSize int `json:"pageSize"`
-	ToUserID int64
-}
-type GetPaginationFriendApplyListResp struct {
-	List     []dto.FriendRequestInfo `json:"list"`
-	Total    int                     `json:"total"`
-	Page     int                     `json:"page"`
-	PageSize int                     `json:"pageSize"`
+type GetPaginationFriendApplyListParams struct {
+	PagedParams
 }
 
 // 获取收到的好友申请列表
-func (s *FriendService) GetPaginationFriendApplyList(ctx context.Context, req GetPaginationFriendApplyListReq) (GetPaginationFriendApplyListResp, error) {
-	// 默认值处理
-	if req.Page <= 0 {
-		req.Page = 1
-	}
-	if req.PageSize <= 0 {
-		req.PageSize = 20
-	}
+func (s *FriendService) GetPaginationFriendApplyList(ctx context.Context, id int64, req GetPaginationFriendApplyListParams) (PagedResp[dto.FriendRequestInfo], error) {
+	base := s.db.WithContext(ctx).Model(&model.FriendRequest{}).Where("to_user_id = ? OR from_user_id = ?", id, id)
 	var total int64
-	db := s.db.WithContext(ctx).Model(&model.FriendRequest{}).Where("to_user_id = ?", req.ToUserID)
-	db.Count(&total)
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return PagedResp[dto.FriendRequestInfo]{}, err
+	}
+
+	page := req.Page
+	pageSize := req.PageSize
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	offset := (page - 1) * pageSize
+
 	var frs []model.FriendRequest
-	db = db.Order("created_at desc").Offset((req.Page - 1) * req.PageSize).Limit(req.PageSize)
-	if err := db.Find(&frs).Error; err != nil {
-		return GetPaginationFriendApplyListResp{}, err
+	err := base.Session(&gorm.Session{}).
+		Scopes(model.SelectFriendRequestInfo).
+		Preload("FromUser", model.SelectUserInfo).
+		Preload("ToUser", model.SelectUserInfo).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&frs).Error
+	if err != nil {
+		return PagedResp[dto.FriendRequestInfo]{}, err
 	}
-	fromIDs := make([]int64, 0, len(frs))
+
+	list := make([]dto.FriendRequestInfo, 0, len(frs))
 	for _, fr := range frs {
-		fromIDs = append(fromIDs, fr.FromUserID)
+		list = append(list, dto.ConvertToFriendRequestInfo(fr, fr.FromUser, fr.ToUser))
 	}
-	var users []model.User
-	if len(fromIDs) > 0 {
-		if err := s.db.WithContext(ctx).Where("user_id IN ?", fromIDs).Find(&users).Error; err != nil {
-			return GetPaginationFriendApplyListResp{}, err
-		}
-	}
-	userMap := make(map[int64]model.User)
-	for _, u := range users {
-		userMap[u.UserID] = u
-	}
-	var list []dto.FriendRequestInfo
-	for _, fr := range frs {
-		fromUser := userMap[fr.FromUserID]
-		list = append(list, dto.ConvertToFriendRequestInfo(fr, fromUser, model.User{}))
-	}
-	return GetPaginationFriendApplyListResp{
-		List:     list,
+
+	return PagedResp[dto.FriendRequestInfo]{
+		Page:     page,
 		Total:    int(total),
-		Page:     req.Page,
-		PageSize: req.PageSize,
+		PageSize: pageSize,
+		Data:     list,
 	}, nil
 }
 
@@ -371,4 +350,8 @@ func (s *FriendService) GetPaginationBlacks(ctx context.Context, req GetPaginati
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}, nil
+}
+
+func (s *FriendService) GetSearchedFriendInfo(ctx context.Context, searchId int64) (dto.UserInfo, error) {
+	return s.userService.GetUsersPublicInfo(ctx, searchId)
 }

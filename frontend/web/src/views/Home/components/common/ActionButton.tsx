@@ -35,7 +35,8 @@ export function ActionButton({
         sizeMap[size],
         variant === 'solid' && 'bg-slate-900 text-white shadow-sm',
         variant === 'ghost' && 'bg-white text-slate-600 hover:bg-slate-100',
-        variant === 'outline' && 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
+        variant === 'outline' &&
+          'border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
         disabled && 'cursor-not-allowed opacity-50'
       )}
       style={

@@ -1,6 +1,6 @@
 import type {
   BlacklistItem,
-  ContactItem,
+  FriendItem,
   ConversationItem,
   FriendRequestItem,
   SavedGroupItem,
@@ -154,7 +154,7 @@ const BASE_CONVERSATIONS: ConversationItem[] = [
   },
 ]
 
-const BASE_CONTACTS: ContactItem[] = [
+const BASE_FRIENDS: FriendItem[] = [
   {
     id: 'c-001',
     name: '林浅',
@@ -300,10 +300,10 @@ export const createConversations = () =>
     reminders: conversation.reminders ? [...conversation.reminders] : undefined,
   }))
 
-export const createContacts = () =>
-  BASE_CONTACTS.map((contact) => ({
-    ...contact,
-    tags: contact.tags ? [...contact.tags] : undefined,
+export const createFriends = () =>
+  BASE_FRIENDS.map((friend) => ({
+    ...friend,
+    tags: friend.tags ? [...friend.tags] : undefined,
   }))
 
 export const createNewFriends = () => BASE_NEW_FRIENDS.map((item) => ({ ...item }))

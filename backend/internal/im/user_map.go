@@ -19,35 +19,35 @@ func (u *UserPlatform) PlatformIDs() []int32 {
 }
 
 type UserState struct {
-	UserID  string
+	UserID  int64
 	Online  []int32
 	Offline []int32
 }
 
 type UserMap interface {
-	GetAll(userID string) ([]*Client, bool)
-	Get(userID string, platformID int) ([]*Client, bool, bool)
-	Set(userID string, v *Client)
-	DeleteClients(userID string, clients []*Client) (isDeleteUser bool)
+	GetAll(userID int64) ([]*Client, bool)
+	Get(userID int64, platformID int) ([]*Client, bool, bool)
+	Set(userID int64, v *Client)
+	DeleteClients(userID int64, clients []*Client) (isDeleteUser bool)
 	UserState() <-chan UserState
 	GetAllUserStatus(deadline time.Time, nowtime time.Time) []UserState
-	RecvSubChange(userID string, platformIDs []int32) bool
+	RecvSubChange(userID int64, platformIDs []int32) bool
 }
 
 type userMap struct {
 	mu              sync.RWMutex
-	userPlatformMap map[string]*UserPlatform
+	userPlatformMap map[int64]*UserPlatform
 	ch              chan UserState
 }
 
 func newUserMap() UserMap {
 	return &userMap{
-		userPlatformMap: make(map[string]*UserPlatform),
+		userPlatformMap: make(map[int64]*UserPlatform),
 		ch:              make(chan UserState, 1024),
 	}
 }
 
-func (u *userMap) GetAll(userID string) ([]*Client, bool) {
+func (u *userMap) GetAll(userID int64) ([]*Client, bool) {
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 	userPlatform, ok := u.userPlatformMap[userID]
@@ -57,7 +57,7 @@ func (u *userMap) GetAll(userID string) ([]*Client, bool) {
 	return userPlatform.Clients, true
 }
 
-func (u *userMap) Get(userID string, platformID int) ([]*Client, bool, bool) {
+func (u *userMap) Get(userID int64, platformID int) ([]*Client, bool, bool) {
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 	userPlatform, ok := u.userPlatformMap[userID]
@@ -73,7 +73,7 @@ func (u *userMap) Get(userID string, platformID int) ([]*Client, bool, bool) {
 	return clients, true, len(clients) > 0
 }
 
-func (u *userMap) Set(userID string, v *Client) {
+func (u *userMap) Set(userID int64, v *Client) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	userPlatform, ok := u.userPlatformMap[userID]
@@ -87,7 +87,7 @@ func (u *userMap) Set(userID string, v *Client) {
 	}
 }
 
-func (u *userMap) DeleteClients(userID string, clients []*Client) (isDeleteUser bool) {
+func (u *userMap) DeleteClients(userID int64, clients []*Client) (isDeleteUser bool) {
 	if len(clients) == 0 {
 		return false
 	}
@@ -121,7 +121,7 @@ func (u *userMap) DeleteClients(userID string, clients []*Client) (isDeleteUser 
 	return true
 }
 
-func (u *userMap) push(userID string, userPlatform *UserPlatform, offline []int32) bool {
+func (u *userMap) push(userID int64, userPlatform *UserPlatform, offline []int32) bool {
 	online := make([]int32, 0, len(userPlatform.Clients))
 	for _, c := range userPlatform.Clients {
 		online = append(online, int32(c.PlatformID))
@@ -163,7 +163,7 @@ func (u *userMap) GetAllUserStatus(deadline time.Time, nowtime time.Time) []User
 	}
 	return results
 }
-func (u *userMap) RecvSubChange(userID string, platformIDs []int32) bool {
+func (u *userMap) RecvSubChange(userID int64, platformIDs []int32) bool {
 	// TODO: implement subscription change handling
 	return true
 }

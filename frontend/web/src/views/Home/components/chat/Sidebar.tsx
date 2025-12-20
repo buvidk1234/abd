@@ -2,10 +2,10 @@ import { forwardRef } from 'react'
 import { Plus, Search } from 'lucide-react'
 import clsx from 'clsx'
 
-import type { ConversationItem } from '../types'
-import { CHAT_MENUS } from '../constants/menus'
+import type { ConversationItem } from '../../types'
+import { CHAT_MENUS } from '../../constants/menus'
 import { ConversationList } from './ConversationList'
-import { IconButton } from './common'
+import { IconButton } from '../common'
 
 interface SidebarProps {
   themeColor: string
@@ -59,9 +59,17 @@ export const Sidebar = forwardRef<HTMLDivElement, SidebarProps>(
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <IconButton icon={<Search className="size-5" />} onClick={onOpenSearch} ariaLabel="搜索" />
+            <IconButton
+              icon={<Search className="size-5" />}
+              onClick={onOpenSearch}
+              ariaLabel="搜索"
+            />
             <div className="relative" ref={menuRef}>
-              <IconButton icon={<Plus className="size-5" />} onClick={onToggleAddMenu} ariaLabel="添加" />
+              <IconButton
+                icon={<Plus className="size-5" />}
+                onClick={onToggleAddMenu}
+                ariaLabel="添加"
+              />
               {showAddMenu && (
                 <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl">
                   {CHAT_MENUS.map((menu) => (

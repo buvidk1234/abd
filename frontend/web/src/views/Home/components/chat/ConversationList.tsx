@@ -1,9 +1,9 @@
 import clsx from 'clsx'
 import { BellOff, Pin, Sparkles } from 'lucide-react'
 
-import type { ConversationItem } from '../types'
-import { formatUnreadCount } from '../utils'
-import { Avatar } from './common'
+import type { ConversationItem } from '../../types'
+import { formatUnreadCount } from '../../utils'
+import { Avatar } from '../common'
 
 interface ConversationListProps {
   themeColor: string
@@ -58,7 +58,9 @@ function ConversationRow({
       onClick={() => onSelect(conversation.id)}
       className={clsx(
         'w-full px-4 py-3 text-left transition hover:bg-slate-50',
-        selected ? 'bg-[#e46342] text-white shadow-[0_12px_36px_rgba(228,99,66,0.25)] hover:bg-[#e46342]' : ''
+        selected
+          ? 'bg-[#e46342] text-white shadow-[0_12px_36px_rgba(228,99,66,0.25)] hover:bg-[#e46342]'
+          : ''
       )}
     >
       <div className="flex items-center gap-3">
@@ -91,14 +93,13 @@ function ConversationRow({
                 <Pin className={clsx('size-4', selected ? 'text-white/80' : 'text-slate-400')} />
               )}
               {conversation.muted && (
-                <BellOff className={clsx('size-4', selected ? 'text-white/80' : 'text-slate-400')} />
+                <BellOff
+                  className={clsx('size-4', selected ? 'text-white/80' : 'text-slate-400')}
+                />
               )}
             </div>
             <span
-              className={clsx(
-                'ml-auto text-[11px]',
-                selected ? 'text-white/70' : 'text-slate-400'
-              )}
+              className={clsx('ml-auto text-[11px]', selected ? 'text-white/70' : 'text-slate-400')}
             >
               {conversation.time}
             </span>
