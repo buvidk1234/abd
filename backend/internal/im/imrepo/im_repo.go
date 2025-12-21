@@ -4,9 +4,11 @@ import (
 	"backend/internal/model"
 	"backend/internal/pkg/cache/cachekey"
 	rds "backend/internal/pkg/cache/redis"
+	"backend/internal/pkg/constant"
 	"backend/internal/service"
 	"context"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -77,4 +79,18 @@ func (r *ImRepo) BatchGetMsg(ctx context.Context, key string, start, end int64) 
 func (r *ImRepo) CreateConversations(ctx context.Context, req service.InitConversationReq) error {
 	err := r.msgService.InitConversation(ctx, req)
 	return err
+}
+
+// InvalidateConversationIDsCache 删除用户的会话ID列表缓存，确保下次拉取从DB重建。
+func (r *ImRepo) InvalidateConversationIDsCache(ctx context.Context, req service.InitConversationReq) {
+	switch req.ConvType {
+	case constant.SingleChatType:
+		owners := []int64{req.SenderID, req.TargetID}
+		for _, owner := range owners {
+			_ = r.rdb.Del(ctx, cachekey.GetConversationIDsKey(strconv.FormatInt(owner, 10))).Err()
+		}
+	case constant.GroupChatType:
+		// TODO: 获取群成员并批量删除缓存，先留空以免阻塞。
+	default:
+	}
 }

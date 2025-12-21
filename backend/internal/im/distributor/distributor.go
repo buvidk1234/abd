@@ -75,11 +75,13 @@ func (d *Distributor) Start() {
 
 		if isNewConversation {
 			log.Printf("distributor: new conversation created: %s", convID)
-			d.repo.CreateConversations(ctx, service.InitConversationReq{
+			initReq := service.InitConversationReq{
 				SenderID: msgs[0].SenderID,
 				ConvType: msgs[0].ConvType,
 				TargetID: msgs[0].TargetID,
-			})
+			}
+			d.repo.CreateConversations(ctx, initReq)
+			go d.repo.InvalidateConversationIDsCache(context.Background(), initReq)
 		}
 
 		// 2. 存储消息到数据库
