@@ -1,5 +1,5 @@
 import { useParams, useNavigate, useOutletContext } from 'react-router'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useImmer } from 'use-immer'
 import { toast } from 'sonner'
 
@@ -8,10 +8,12 @@ import { CHAT_MENUS } from '../constants/menus'
 import { Sidebar } from '../components/chat/Sidebar'
 import { ChatPanel } from '../components/chat/ChatPanel'
 import { ChannelPanel } from '../components/chat/ChannelPanel'
-import { useMockData } from '../hooks/useMockData'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useResponsive } from '../hooks/useResponsive'
-import { useWS } from '../hooks/useWS'
+import { useConversations, useMessageContext } from '../hooks'
+import { useUserStore } from '@/store/userStore'
+import { adaptMessageToItem } from '../utils/formatters'
+import type { ConversationItem } from '../types'
 
 interface LayoutContext {
   onOpenGlobalSearch: () => void
@@ -30,14 +32,72 @@ export function ChatPage() {
   const isMobile = useResponsive()
   const addMenuRef = useRef<HTMLDivElement | null>(null)
 
-  const { conversations, actions: dataActions } = useMockData()
-  const selectedConversation = conversations.find((c) => c.id === id) ?? null
+  const { conversations, actions: dataActions, getOrCreateConversation } = useConversations()
+  const { user } = useUserStore()
+  const { conversationMessages, loadMoreMessages, loading, setOnNewMessage, maxSeqs } =
+    useMessageContext()
 
   const [uiState, setUIState] = useImmer<UIState>({
     showAddMenu: false,
     showDetails: false,
     showSidebarOnMobile: true,
   })
+
+  // 追踪已加载过消息的会话
+  const loadedConversationsRef = useRef<Set<string>>(new Set())
+
+  // 如果会话不存在，尝试创建（用于从联系人页面跳转）
+  useEffect(() => {
+    if (!id) return
+    console.log(conversations)
+
+    const conv = conversations.find((c) => c.id === id)
+    if (!conv && getOrCreateConversation) {
+      getOrCreateConversation(id)
+    }
+  }, [id, conversations, getOrCreateConversation])
+
+  // 获取当前会话，并合并真实消息
+  const selectedConversation = useMemo((): ConversationItem | null => {
+    const conv = conversations.find((c) => c.id === id)
+    if (!conv) return null
+
+    // 获取真实消息
+    const realMessages = conversationMessages[id || ''] || []
+    console.log('realMessages', realMessages)
+
+    const adaptedMessages = realMessages.map((msg) => adaptMessageToItem(msg, user.id))
+
+    return {
+      ...conv,
+      messages: adaptedMessages,
+    }
+  }, [conversations, conversationMessages, id, user.id])
+
+  // 监听新消息
+  useEffect(() => {
+    setOnNewMessage((msg) => {
+      if (msg.sender_id !== user.id) {
+        toast.success(`收到新消息: ${msg.content.slice(0, 20)}...`)
+      }
+    })
+  }, [setOnNewMessage])
+
+  // 当会话 ID 和 maxSeq 都准备好时，自动加载消息
+  useEffect(() => {
+    if (!id) return
+
+    // 如果已经加载过，跳过
+    if (loadedConversationsRef.current.has(id)) return
+
+    // 检查该会话是否有 maxSeq
+    const hasMaxSeq = maxSeqs[id] !== undefined
+
+    if (hasMaxSeq) {
+      loadMoreMessages(id, 20)
+      loadedConversationsRef.current.add(id)
+    }
+  }, [id, maxSeqs, loadMoreMessages])
 
   // 移动端
   if (isMobile && !uiState.showSidebarOnMobile && !id) {
@@ -75,17 +135,11 @@ export function ChatPage() {
     })
   }
 
-  const { send } = useWS()
-  useEffect(() => {
-    setInterval(() => {
-      send({
-        req_identifier: 4001,
-        data: {
-          id: id,
-        }
-      })
-    }, 2000)
-  }, [])
+  const handleLoadMore = () => {
+    if (id && !loading[id]) {
+      loadMoreMessages(id, 20)
+    }
+  }
 
   return (
     <div className="relative flex min-w-0 flex-1">
@@ -126,6 +180,8 @@ export function ChatPage() {
             draft.showDetails = true
           })
         }
+        onLoadMore={handleLoadMore}
+        isLoadingMore={id ? loading[id] : false}
       />
 
       <ChannelPanel

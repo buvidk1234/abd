@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useOutletContext } from 'react-router'
+import { useParams, useNavigate } from 'react-router'
 import { useImmer } from 'use-immer'
 
 import { THEME_COLOR, SPECIAL_KEYS } from '../constants'
@@ -116,7 +116,7 @@ export function ContactPage() {
     return (
       <FriendDetail
         themeColor={THEME_COLOR}
-        friend={selectedFriend}
+        friend={selectedFriend!}
         isMobile={isMobile}
         onBack={() =>
           setUIState((draft) => {

@@ -6,6 +6,7 @@ export interface MessageItem {
   content: string
   timestamp: string
   direction: MessageDirection
+  status?: number // 1: 发送中, 2: 已发送, 3: 失败
 }
 
 export interface ConversationItem {

@@ -5,46 +5,26 @@
  * - No React, no UI dependencies, no HTTP
  */
 
-export enum ConvType {
-  SingleChat = 1,
-  GroupChat = 2,
-}
-
-export enum MessageType {
-  Text = 1,
-  Image = 2,
-  Audio = 3,
-  Video = 4,
-  File = 5,
-}
-
-export enum MessageStatus {
-  Sending = 1,
-  Sent = 2,
-  Failed = 3,
-  Read = 4,
-}
-
 export interface Message {
   id: string
-  conversationId: string
+  conversation_id: string
   seq: number
-  senderId: string
-  clientMsgId?: string
-  msgType: MessageType
+  sender_id: string
+  client_msg_id?: string
+  msg_type: number
   content: string
-  refMsgId?: string
-  status?: MessageStatus
-  sendTime?: number
-  createTime?: number
-  convType?: ConvType
-  targetId?: string
+  ref_msg_id?: string
+  status?: number
+  send_time?: number
+  create_time?: number
+  conv_type?: number
+  target_id?: string
 }
 
 export interface SendMessageData {
-  convType: ConvType
+  conv_type: number
   targetId: string
-  msgType: MessageType
+  msg_type: number
   content: string
 }
 

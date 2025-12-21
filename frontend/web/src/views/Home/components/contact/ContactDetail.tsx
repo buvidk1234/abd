@@ -1,8 +1,10 @@
 import { ArrowLeft, MessageCircle, Phone, ShieldCheck, Star } from 'lucide-react'
 import { toast } from 'sonner'
+import { useNavigate } from 'react-router'
 
 import { ActionButton, Avatar, Badge, IconButton } from '../common'
 import type { Friend } from '@/modules'
+import { useUserStore } from '@/store/userStore'
 
 interface FriendDetailProps {
   themeColor: string
@@ -11,7 +13,23 @@ interface FriendDetailProps {
   onBack: () => void
 }
 
+/**
+ * 生成会话 ID
+ * 格式: single:userId1_userId2 (小的ID在前)
+ */
+function generateConversationId(userId1: string | number, userId2: string | number): string {
+  const id1 = String(userId1)
+  const id2 = String(userId2)
+
+  const [smaller, larger] = id1 < id2 ? [id1, id2] : [id2, id1]
+
+  return `single:${smaller}_${larger}`
+}
+
 export function FriendDetail({ themeColor, friend, isMobile, onBack }: FriendDetailProps) {
+  const navigate = useNavigate()
+  const { user } = useUserStore()
+
   if (!friend) {
     return (
       <div className="flex min-w-0 flex-1 items-center justify-center bg-slate-50">
@@ -37,7 +55,12 @@ export function FriendDetail({ themeColor, friend, isMobile, onBack }: FriendDet
             icon={<MessageCircle className="size-4" />}
             label="发消息"
             themeColor={themeColor}
-            onClick={() => toast.info('消息功能稍后接入')}
+            onClick={() => {
+              // 生成会话 ID 并跳转到聊天页面
+              const conversationId = generateConversationId(user.id, friend.friendUser.id)
+              navigate(`/chat/${conversationId}`)
+              toast.success('开始聊天')
+            }}
           />
           <ActionButton
             icon={<Phone className="size-4" />}

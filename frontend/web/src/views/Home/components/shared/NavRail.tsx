@@ -1,7 +1,10 @@
-import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { useEffect, type ReactNode } from 'react'
 import clsx from 'clsx'
-import { MessageCircle, Settings, Users } from 'lucide-react'
+import { LogOut, MessageCircle, Settings, Users } from 'lucide-react'
+import { useImmer } from 'use-immer'
 
+import { Button } from '@/components/ui/button'
 import { getInitials } from '../../utils'
 
 interface NavRailProps {
@@ -10,6 +13,7 @@ interface NavRailProps {
   userName: string
   onSelectTab: (tab: 'chat' | 'friends') => void
   onOpenSettings: () => void
+  onLogout?: () => void
 }
 
 export function NavRail({
@@ -18,8 +22,26 @@ export function NavRail({
   userName,
   onSelectTab,
   onOpenSettings,
+  onLogout,
 }: NavRailProps) {
   const initials = getInitials(userName)
+  const [showSettingsActions, setShowSettingsActions] = useImmer(false)
+  const [mounted, setMounted] = useImmer(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [setMounted])
+
+  const handleToggleSettings = () => setShowSettingsActions((open) => !open)
+  const handleCloseMenu = () => setShowSettingsActions(false)
+  const handleOpenSettings = () => {
+    handleCloseMenu()
+    onOpenSettings()
+  }
+  const handleLogout = () => {
+    handleCloseMenu()
+    onLogout?.()
+  }
 
   return (
     <div className="hidden h-full w-20 flex-shrink-0 flex-col items-center justify-between bg-white/90 py-4 shadow-sm backdrop-blur md:flex">
@@ -51,14 +73,54 @@ export function NavRail({
         />
       </div>
 
-      <div className="flex flex-col items-center gap-3">
+      <div className="relative flex flex-col items-center gap-3">
         <NavButton
           label="设置"
-          active={false}
+          active={showSettingsActions}
           themeColor={themeColor}
           icon={<Settings className="size-5" />}
-          onClick={onOpenSettings}
+          onClick={handleToggleSettings}
         />
+        {mounted && showSettingsActions
+          ? createPortal(
+              <div
+                className="fixed inset-0 z-50 flex items-end justify-start bg-transparent"
+                onClick={handleCloseMenu}
+              >
+                <div
+                  className="relative mb-20 ml-4 w-60 rounded-2xl border border-slate-200 bg-white/95 p-3 text-sm shadow-2xl backdrop-blur animate-in fade-in zoom-in-95"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    快捷操作
+                  </div>
+                  <div className="space-y-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-slate-700"
+                      onClick={handleOpenSettings}
+                    >
+                      <Settings className="size-4" />
+                      打开设置
+                    </Button>
+                    {onLogout ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="size-4" />
+                        退出登录
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>,
+              document.body
+            )
+          : null}
       </div>
     </div>
   )

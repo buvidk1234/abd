@@ -4,7 +4,6 @@
  */
 
 // Domain models and enums
-export { ConvType, MessageType, MessageStatus } from './model'
 export type { Message, SendMessageData, ConversationMessages } from './model'
 
 // Repository functions

@@ -7,33 +7,33 @@
  */
 
 import type { Message, SendMessageData, ConversationMessages } from './model'
-import type { MessageDTO, SendMessageReq, PullConvListParams, PullSpecifiedConvParams } from './api'
+import type { MessageDTO, SendMessageReq } from './api'
 import { sendMessageApi, pullConvListApi, pullConversationApi } from './api'
 
 // ============ DTO to Domain Converters ============
 
 const toMessage = (dto: MessageDTO): Message => ({
   id: String(dto.ID),
-  conversationId: dto.ConversationID,
+  conversation_id: dto.ConversationID,
   seq: dto.Seq,
-  senderId: dto.SenderID,
-  clientMsgId: dto.ClientMsgID,
-  msgType: dto.MsgType,
+  sender_id: dto.SenderID,
+  client_msg_id: dto.ClientMsgID,
+  msg_type: dto.MsgType,
   content: dto.Content,
-  refMsgId: dto.RefMsgID ? String(dto.RefMsgID) : undefined,
+  ref_msg_id: dto.RefMsgID ? String(dto.RefMsgID) : undefined,
   status: dto.Status,
-  sendTime: dto.SendTime,
-  createTime: dto.CreateTime,
-  convType: dto.ConvType,
-  targetId: dto.TargetID,
+  send_time: dto.SendTime,
+  create_time: dto.CreateTime,
+  conv_type: dto.ConvType,
+  target_id: dto.TargetID,
 })
 
 // ============ Domain to DTO Converters ============
 
 const toSendMessageReq = (data: SendMessageData): SendMessageReq => ({
-  conv_type: data.convType,
+  conv_type: data.conv_type,
   target_id: data.targetId,
-  msg_type: data.msgType,
+  msg_type: data.msg_type,
   content: data.content,
 })
 
