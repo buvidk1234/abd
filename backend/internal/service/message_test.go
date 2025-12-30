@@ -102,8 +102,9 @@ func TestPullMessageBySeqs(t *testing.T) {
 	// 3. Test Cases
 
 	// Case 1: Pull Ascending 1-5
+
 	req := PullMessageBySeqsReq{
-		UserID: userID,
+
 		SeqRanges: []*SeqRange{
 			{
 				ConversationID: convID,
@@ -114,7 +115,7 @@ func TestPullMessageBySeqs(t *testing.T) {
 		},
 		Order: PullOrderAsc,
 	}
-	resp, err := svc.PullMessageBySeqs(ctx, req)
+	resp, err := svc.PullMessageBySeqs(ctx, userID, req)
 	if err != nil {
 		t.Fatalf("Case 1 failed: %v", err)
 	}
@@ -127,7 +128,6 @@ func TestPullMessageBySeqs(t *testing.T) {
 
 	// Case 2: Pull Descending 10-6
 	req2 := PullMessageBySeqsReq{
-		UserID: userID,
 		SeqRanges: []*SeqRange{
 			{
 				ConversationID: convID,
@@ -138,7 +138,7 @@ func TestPullMessageBySeqs(t *testing.T) {
 		},
 		Order: PullOrderDesc,
 	}
-	resp2, err := svc.PullMessageBySeqs(ctx, req2)
+	resp2, err := svc.PullMessageBySeqs(ctx, userID, req2)
 	if err != nil {
 		t.Fatalf("Case 2 failed: %v", err)
 	}
@@ -148,7 +148,6 @@ func TestPullMessageBySeqs(t *testing.T) {
 
 	// Case 3: Limit Num
 	req3 := PullMessageBySeqsReq{
-		UserID: userID,
 		SeqRanges: []*SeqRange{
 			{
 				ConversationID: convID,
@@ -159,7 +158,7 @@ func TestPullMessageBySeqs(t *testing.T) {
 		},
 		Order: PullOrderAsc,
 	}
-	resp3, err := svc.PullMessageBySeqs(ctx, req3)
+	resp3, err := svc.PullMessageBySeqs(ctx, userID, req3)
 	if err != nil {
 		t.Fatalf("Case 3 failed: %v", err)
 	}
@@ -186,7 +185,6 @@ func TestPullMessageBySeqs(t *testing.T) {
 	}
 	t.Logf("updatedConv: %v", updatedConv)
 	req4 := PullMessageBySeqsReq{
-		UserID: userID,
 		SeqRanges: []*SeqRange{
 			{
 				ConversationID: convID,
@@ -197,7 +195,7 @@ func TestPullMessageBySeqs(t *testing.T) {
 		},
 		Order: PullOrderAsc,
 	}
-	resp4, err := svc.PullMessageBySeqs(ctx, req4)
+	resp4, err := svc.PullMessageBySeqs(ctx, userID, req4)
 	if err != nil {
 		t.Fatalf("Case 4 failed: %v", err)
 	}
@@ -252,10 +250,8 @@ func TestGetMaxSeq(t *testing.T) {
 	// Ideally we should import cachekey package.
 
 	// 3. Execute
-	req := GetMaxSeqReq{
-		UserID: userID,
-	}
-	resp, err := svc.GetMaxSeq(ctx, req)
+
+	resp, err := svc.GetMaxSeq(ctx, userID)
 
 	// 4. Assert
 	if err != nil {
@@ -275,7 +271,7 @@ func TestGetMaxSeq(t *testing.T) {
 	}
 
 	// Test Cache Hit (Optional: Run again and check logs or coverage, but hard to assert without mocking)
-	resp2, err := svc.GetMaxSeq(ctx, req)
+	resp2, err := svc.GetMaxSeq(ctx, userID)
 	if err != nil {
 		t.Fatalf("GetMaxSeq (2nd call) failed: %v", err)
 	}

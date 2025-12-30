@@ -54,8 +54,10 @@ func TestServiceHandler_SendMessage(t *testing.T) {
 	dataBytes, _ := json.Marshal(sendReq)
 
 	req := &Req{
-		ReqIdentifier: 1001,
-		Data:          dataBytes,
+		InboundReq: InboundReq{
+			ReqIdentifier: 1001,
+			Data:          dataBytes,
+		},
 	}
 
 	// Test SendMessage
@@ -80,8 +82,10 @@ func TestServiceHandler_PullSpecifiedConv(t *testing.T) {
 	dataBytes, _ := json.Marshal(pullReq)
 
 	req := &Req{
-		ReqIdentifier: 1002,
-		Data:          dataBytes,
+		InboundReq: InboundReq{
+			ReqIdentifier: 1002,
+			Data:          dataBytes,
+		},
 	}
 
 	// Test PullSpecifiedConv
