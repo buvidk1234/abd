@@ -9,6 +9,7 @@ import (
 	"backend/internal/pkg/cache/redis"
 	"backend/internal/pkg/database"
 	"backend/internal/pkg/kafka"
+	"backend/internal/pkg/prommetrics"
 	"backend/internal/pkg/snowflake"
 	"context"
 	"os"
@@ -50,9 +51,12 @@ func main() {
 	r := api.NewGinRouter()
 	wsServer := im.NewWsServer()
 	pusher.InitAndRun(wsServer)
-	distributor := distributor.NewDistributor(im.NewWsServer())
+	distributor := distributor.NewDistributor(wsServer)
 	go distributor.Start()
 	go wsServer.Run(context.Background())
+
+	prommetrics.RegistryAll()
+	go prommetrics.Start(":9090")
 
 	r.Run()
 }

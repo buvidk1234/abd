@@ -3,6 +3,7 @@ package im
 import (
 	"backend/internal/pkg/database"
 	"backend/internal/pkg/kafka"
+	"backend/internal/pkg/prommetrics"
 	"backend/internal/service"
 	"backend/pkg/util"
 	"context"
@@ -99,9 +100,10 @@ func (ws *WsServer) Run(ctx context.Context) {
 			<-ctx.Done()
 			_ = wsServer.Shutdown(context.Background())
 		}()
+		log.Printf("WebSocket server starting on :%d", ws.port)
 		err := wsServer.ListenAndServe()
-		if err == nil {
-			err = fmt.Errorf("http server closed")
+		if err != nil {
+			log.Printf("WebSocket server error: %v", err)
 		}
 		cancel(fmt.Errorf("msg gateway %w", err))
 	}()
@@ -156,6 +158,7 @@ func (ws *WsServer) registerClient(client *Client) {
 		ws.Clients.Set(client.UserID, client)
 		ws.onlineUserNum.Add(1)
 		ws.onlineUserConnNum.Add(1)
+		prommetrics.OnlineUserGauge.Add(1)
 	} else {
 		ws.multiTerminalLoginChecker(clientOK, oldClients, client)
 
@@ -169,6 +172,7 @@ func (ws *WsServer) unregisterClient(client *Client) {
 	isDeleteUser := ws.Clients.DeleteClients(client.UserID, []*Client{client})
 	if isDeleteUser {
 		ws.onlineUserNum.Add(-1)
+		prommetrics.OnlineUserGauge.Dec()
 	}
 	ws.onlineUserConnNum.Add(-1)
 	// ws.subscription.DelClient(client)

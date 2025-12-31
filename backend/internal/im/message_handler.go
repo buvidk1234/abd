@@ -2,6 +2,7 @@ package im
 
 import (
 	"backend/internal/pkg/kafka"
+	"backend/internal/pkg/prommetrics"
 	"backend/internal/service"
 	"context"
 	"encoding/json"
@@ -120,9 +121,11 @@ func (s *ServiceHandler) SendMessage(ctx context.Context, data *Req) (any, error
 
 	partition, offset, err := s.producer.SendMessage(msg)
 	if err != nil {
+		prommetrics.MsgProcessFailedCounter.Inc()
 		log.Printf("FAILED to send kafka message: %v", err)
 		return nil, err
 	}
+	prommetrics.MsgProcessSuccessCounter.Inc()
 	log.Printf("message sent to partition=%d offset=%d", partition, offset)
 	return nil, nil
 }
