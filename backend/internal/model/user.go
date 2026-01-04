@@ -38,7 +38,7 @@ type User struct {
 	GlobalRecvMsgOpt int32 `gorm:"column:global_recv_msg_opt;type:tinyint;default:0;comment:全局免打扰0正常1免打扰" json:"globalRecvMsgOpt"`
 	Status           int32 `gorm:"column:status;type:tinyint;default:1;comment:状态1正常2封禁" json:"status"`
 	// 扩展字段
-	Ex        string         `gorm:"column:ex;type:json;comment:扩展字段" json:"ex"`
+	Ex        string         `gorm:"column:ex;type:text;comment:扩展字段" json:"ex"`
 	CreatedAt time.Time      `gorm:"column:create_time;autoCreateTime;comment:注册时间" json:"createTime"`
 	UpdatedAt time.Time      `gorm:"column:update_time;autoUpdateTime;comment:更新时间" json:"updateTime"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

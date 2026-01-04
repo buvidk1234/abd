@@ -21,6 +21,7 @@ type AppConfig struct {
 	Redis     redis.Config     `yaml:"redis"`
 	Snowflake snowflake.Config `yaml:"snowflake"`
 	Kafka     kafka.Config     `yaml:"kafka"`
+	Database  database.Config  `yaml:"database"`
 }
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 	yaml.Unmarshal(raw, &cfg)
 
 	redis.Init(cfg.Redis)
-	database.Init()
+	database.Init(cfg.Database)
 	snowflake.Init(cfg.Snowflake)
 	kafka.Init(cfg.Kafka)
 

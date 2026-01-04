@@ -5,21 +5,17 @@ redis:
   pool_size: 10
   min_idle_conns: 2
 
-# Kafka configuration - matches `internal/pkg/kafka.Config`
+# Kafka configuration
 kafka:
   addr:
     - "192.168.6.130:9092"
   producerAck: "WaitForLocal"
   compressType: "none"
 
-
-# Database connection configuration. Update `driver` and `dsn` for your DB.
+# Database configuration
 database:
-  # driver: sqlite3 | mysql | postgres
-  driver: "sqlite3"
-  # For sqlite in-memory test example
-  dsn: "file::memory:?cache=shared"
-  # Example MySQL DSN: "user:pass@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
+  driver: "mysql"
+  dsn: "root:123@tcp(192.168.6.130:3306)/abd?charset=utf8mb4&parseTime=True&loc=Local"
   max_open_conns: 25
   max_idle_conns: 10
 
