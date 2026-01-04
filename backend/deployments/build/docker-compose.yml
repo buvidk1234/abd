@@ -1,0 +1,96 @@
+version: "3.9"
+
+services:
+  # ==============================================
+  # 后端应用
+  # ==============================================
+  backend:
+    build:
+      context: ../..
+      dockerfile: deployments/build/Dockerfile
+    container_name: backend-app
+    ports:
+      - "8080:8080"   # HTTP API
+      - "8082:8082"   # WebSocket
+    environment:
+      - GIN_MODE=release
+    volumes:
+      - ./config.yaml:/app/config/config.yaml:ro
+    depends_on:
+      - redis
+      - kafka
+      - mysql
+    networks:
+      - backend-net
+    restart: unless-stopped
+
+  # ==============================================
+  # MySQL 数据库
+  # ==============================================
+  mysql:
+    image: mysql:8.0
+    container_name: backend-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "123"
+      MYSQL_DATABASE: "abd"
+      MYSQL_CHARSET: "utf8mb4"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - backend-net
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # ==============================================
+  # Redis 缓存
+  # ==============================================
+  redis:
+    image: redis:7.4-alpine
+    container_name: backend-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass 123456 --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend-net
+    restart: unless-stopped
+
+  # ==============================================
+  # Kafka (KRaft 模式，无需 Zookeeper)
+  # ==============================================
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: backend-kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - backend-net
+    restart: unless-stopped
+
+networks:
+  backend-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  kafka-data:

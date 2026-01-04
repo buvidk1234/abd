@@ -67,7 +67,7 @@ func TestClient_ResetClient(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	client := &Client{}
-	wsServer := NewWsServer() // Assuming NewWsServer is available and simple enough
+	wsServer := NewWsServer(Config{}) // Assuming NewWsServer is available and simple enough
 
 	client.ResetClient(w, req, conn, wsServer)
 
@@ -172,7 +172,7 @@ func TestClient_KickOnlineMessage(t *testing.T) {
 	// We need to set hbCtx for close() to work without panic if it cancels context
 	ctx, cancel := context.WithCancel(context.Background())
 
-	wsServer := NewWsServer()
+	wsServer := NewWsServer(Config{})
 	// Consume unregister channel to prevent blocking
 	go func() {
 		for range wsServer.unregisterChan {

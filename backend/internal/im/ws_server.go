@@ -18,8 +18,16 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Config WebSocket 服务配置
+type Config struct {
+	Addr             string `yaml:"addr"`              // WebSocket 监听地址
+	MaxConnNum       int64  `yaml:"max_conn_num"`      // 最大连接数
+	WriteBufferSize  int    `yaml:"write_buffer_size"` // 写缓冲区大小
+	HandshakeTimeout int    `yaml:"handshake_timeout"` // 握手超时(秒)
+}
+
 type WsServer struct {
-	port              int
+	addr              string
 	wsMaxConnNum      int64
 	onlineUserNum     atomic.Int64
 	onlineUserConnNum atomic.Int64
@@ -45,16 +53,31 @@ type kickHandler struct {
 	newClient  *Client
 }
 
-func NewWsServer() *WsServer {
+func NewWsServer(cfg Config) *WsServer {
 	producer, err := kafka.NewSyncProducer()
 	if err != nil {
 		panic(fmt.Sprintf("failed to create kafka producer: %v", err))
 	}
+
+	// 设置默认值
+	if cfg.Addr == "" {
+		cfg.Addr = ":8082"
+	}
+	if cfg.MaxConnNum == 0 {
+		cfg.MaxConnNum = 10000
+	}
+	if cfg.WriteBufferSize == 0 {
+		cfg.WriteBufferSize = 4096
+	}
+	if cfg.HandshakeTimeout == 0 {
+		cfg.HandshakeTimeout = 5
+	}
+
 	return &WsServer{
-		port:             8081,
-		wsMaxConnNum:     10000,
-		writeBufferSize:  4096,
-		handshakeTimeout: 5 * time.Second,
+		addr:             cfg.Addr,
+		wsMaxConnNum:     cfg.MaxConnNum,
+		writeBufferSize:  cfg.WriteBufferSize,
+		handshakeTimeout: time.Duration(cfg.HandshakeTimeout) * time.Second,
 		clientPool: sync.Pool{
 			New: func() any {
 				return new(Client)
@@ -93,14 +116,14 @@ func (ws *WsServer) Run(ctx context.Context) {
 
 	done := make(chan struct{})
 	go func() {
-		wsServer := http.Server{Addr: fmt.Sprintf(":%d", ws.port), Handler: nil}
+		wsServer := http.Server{Addr: ws.addr, Handler: nil}
 		http.HandleFunc("/ws", ws.wsHandler)
 		go func() {
 			defer close(done)
 			<-ctx.Done()
 			_ = wsServer.Shutdown(context.Background())
 		}()
-		log.Printf("WebSocket server starting on :%d", ws.port)
+		log.Printf("WebSocket server starting on %s", ws.addr)
 		err := wsServer.ListenAndServe()
 		if err != nil {
 			log.Printf("WebSocket server error: %v", err)

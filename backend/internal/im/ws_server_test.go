@@ -17,7 +17,7 @@ import (
 
 func TestWsHandler_RegisterClient(t *testing.T) {
 	kafka.Init(kafka.Config{Addr: []string{"192.168.6.130:9092"}})
-	ws := NewWsServer()
+	ws := NewWsServer(Config{})
 
 	srv := httptest.NewServer(http.HandlerFunc(ws.wsHandler))
 	defer srv.Close()
@@ -51,7 +51,6 @@ func TestWsHandler_RegisterClient(t *testing.T) {
 
 func TestWsServer_Run_RegisterAndShutdown(t *testing.T) {
 	kafka.Init(kafka.Config{Addr: []string{"192.168.6.130:9092"}})
-	ws := NewWsServer()
 
 	// pick a free port
 	l, err := net.Listen("tcp", "127.0.0.1:0")
@@ -62,7 +61,7 @@ func TestWsServer_Run_RegisterAndShutdown(t *testing.T) {
 	port := addr.Port
 	_ = l.Close()
 
-	ws.port = port
+	ws := NewWsServer(Config{Addr: fmt.Sprintf(":%d", port)})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

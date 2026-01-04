@@ -22,6 +22,13 @@ type AppConfig struct {
 	Snowflake snowflake.Config `yaml:"snowflake"`
 	Kafka     kafka.Config     `yaml:"kafka"`
 	Database  database.Config  `yaml:"database"`
+	Server    ServerConfig     `yaml:"server"`
+	WebSocket im.Config        `yaml:"websocket"`
+}
+
+type ServerConfig struct {
+	HTTPAddr    string `yaml:"http_addr"`
+	MetricsAddr string `yaml:"metrics_addr"`
 }
 
 func main() {
@@ -50,14 +57,14 @@ func main() {
 	db.AutoMigrate(&model.UserTimeline{})
 
 	r := api.NewGinRouter()
-	wsServer := im.NewWsServer()
+	wsServer := im.NewWsServer(cfg.WebSocket)
 	pusher.InitAndRun(wsServer)
 	distributor := distributor.NewDistributor(wsServer)
 	go distributor.Start()
 	go wsServer.Run(context.Background())
 
 	prommetrics.RegistryAll()
-	go prommetrics.Start(":9090")
+	go prommetrics.Start(cfg.Server.MetricsAddr)
 
-	r.Run()
+	r.Run(cfg.Server.HTTPAddr)
 }

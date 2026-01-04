@@ -22,6 +22,11 @@ func TestImRepo(t *testing.T) {
 	})
 	rdb := redis.GetRDB()
 
+	// 初始化数据库
+	database.Init(database.Config{
+		Driver: "sqlite3",
+		DSN:    "file::memory:?cache=shared",
+	})
 	db := database.GetDB()
 	db.AutoMigrate(model.SeqConversation{})
 
@@ -91,6 +96,11 @@ func TestBatchStoreMsgToDB(t *testing.T) {
 	})
 	rdb := redis.GetRDB()
 
+	// 初始化数据库
+	database.Init(database.Config{
+		Driver: "sqlite3",
+		DSN:    "file::memory:?cache=shared",
+	})
 	db := database.GetDB()
 	db.AutoMigrate(&model.Message{})
 
