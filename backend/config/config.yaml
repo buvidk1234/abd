@@ -1,5 +1,5 @@
 redis:
-  addr: "192.168.6.130:6379"
+  addr: "localhost:6379"
   password: "123456"
   db: 0
   pool_size: 10
@@ -7,13 +7,13 @@ redis:
 
 kafka:
   addr:
-    - "192.168.6.130:9092"
+    - "localhost:9092"
   producerAck: "WaitForLocal"
   compressType: "none"
 
 database:
   driver: "mysql"
-  dsn: "root:123@tcp(192.168.6.130:3306)/abd?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:123@tcp(localhost:3306)/abd?charset=utf8mb4&parseTime=True&loc=Local"
   max_open_conns: 25
   max_idle_conns: 10
 

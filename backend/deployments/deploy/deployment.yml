@@ -1,0 +1,312 @@
+# ==============================================
+# Namespace
+# ==============================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backend
+  labels:
+    app.kubernetes.io/name: backend
+---
+# ==============================================
+# ConfigMap - Application Configuration
+# ==============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: backend
+data:
+  config.yaml: |
+    redis:
+      addr: "redis-svc.backend.svc.cluster.local:6379"
+      password: "123456"
+      db: 0
+      pool_size: 10
+      min_idle_conns: 2
+
+    kafka:
+      addr:
+        - "kafka-svc.backend.svc.cluster.local:9092"
+      producerAck: "WaitForLocal"
+      compressType: "none"
+
+    database:
+      driver: "mysql"
+      dsn: "root:123@tcp(mysql-svc.backend.svc.cluster.local:3306)/abd?charset=utf8mb4&parseTime=True&loc=Local"
+      max_open_conns: 25
+      max_idle_conns: 10
+
+    server:
+      http_addr: ":8080"
+      metrics_addr: ":9090"
+
+    websocket:
+      addr: ":8082"
+      max_conn_num: 10000
+      write_buffer_size: 4096
+      handshake_timeout: 5
+
+    snowflake:
+      machine_id: 1
+
+    app:
+      log_level: "info"
+      jwt_signing_key: "replace-with-secret"
+---
+# ==============================================
+# Deployment - Backend Application
+# ==============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: backend
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: backend
+          image: backend:latest  # 替换为你的镜像地址
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: websocket
+              containerPort: 8082
+            - name: metrics
+              containerPort: 9090
+          env:
+            - name: GIN_MODE
+              value: "release"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+      volumes:
+        - name: config
+          configMap:
+            name: backend-config
+---
+# ==============================================
+# Service - Backend
+# ==============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-svc
+  namespace: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: websocket
+      port: 8082
+      targetPort: 8082
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+  selector:
+    app: backend
+---
+# ==============================================
+# Service - Backend NodePort (外部访问)
+# ==============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-nodeport
+  namespace: backend
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+    - name: websocket
+      port: 8082
+      targetPort: 8082
+      nodePort: 30082
+  selector:
+    app: backend
+---
+# ==============================================
+# MySQL Deployment
+# ==============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "123"
+            - name: MYSQL_DATABASE
+              value: "abd"
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-data
+          emptyDir: {}  # 生产环境请使用 PVC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-svc
+  namespace: backend
+spec:
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+    app: mysql
+---
+# ==============================================
+# Redis Deployment
+# ==============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.4-alpine
+          ports:
+            - containerPort: 6379
+          command: ["redis-server", "--requirepass", "123456", "--appendonly", "yes"]
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          emptyDir: {}  # 生产环境请使用 PVC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-svc
+  namespace: backend
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis
+---
+# ==============================================
+# Kafka Deployment (KRaft 模式)
+# ==============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: apache/kafka:4.1.1
+          ports:
+            - containerPort: 9092
+            - containerPort: 9093
+          env:
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "1@localhost:9093"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka-svc.backend.svc.cluster.local:9092"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+          volumeMounts:
+            - name: kafka-data
+              mountPath: /var/lib/kafka/data
+      volumes:
+        - name: kafka-data
+          emptyDir: {}  # 生产环境请使用 PVC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-svc
+  namespace: backend
+spec:
+  ports:
+    - port: 9092
+      targetPort: 9092
+  selector:
+    app: kafka
