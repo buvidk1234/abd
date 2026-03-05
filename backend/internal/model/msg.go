@@ -19,7 +19,7 @@ func (SeqConversation) TableName() string {
 
 type Conversation struct {
 	// 1. 联合主键
-	OwnerID        int64  `gorm:"column:owner_id;primaryKey" json:"owner_id,string"`
+	OwnerID        int64  `gorm:"column:owner_id;primaryKey;index:idx_conv_list,priority:1" json:"owner_id,string"`
 	ConversationID string `gorm:"column:conversation_id;type:varchar(64);primaryKey" json:"conversation_id"`
 
 	// 2. 会话类型
@@ -27,11 +27,11 @@ type Conversation struct {
 
 	// 3. 核心状态控制 (这就是你提到的 Status)
 	// 1=正常, 2=已删除(隐藏), 3=被封禁/异常
-	Status int32 `gorm:"column:status;default:1;index" json:"status"`
+	Status int32 `gorm:"column:status;default:1;index:idx_conv_list,priority:2" json:"status"`
 
 	// 4. 个性化设置
 	UnreadCount int32  `gorm:"column:unread_count;default:0" json:"unread_count"`
-	IsPinned    bool   `gorm:"column:is_pinned;default:false;index" json:"is_pinned"` // 置顶需索引，方便排序
+	IsPinned    bool   `gorm:"column:is_pinned;default:false;index:idx_conv_list,priority:3" json:"is_pinned"` // 置顶需索引，方便排序
 	IsMuted     bool   `gorm:"column:is_muted;default:false" json:"is_muted"`
 	ShowName    string `gorm:"column:show_name;type:varchar(128)" json:"show_name"` // 备注名
 
@@ -43,7 +43,7 @@ type Conversation struct {
 
 	// 6. 冗余显示 (兜底用)
 	LastMsgID       int64  `gorm:"column:last_msg_id" json:"last_msg_id,string"`
-	LastMsgTime     int64  `gorm:"column:last_msg_time;index" json:"last_msg_time"` // 用于列表排序
+	LastMsgTime     int64  `gorm:"column:last_msg_time;index:idx_conv_list,priority:4;sort:desc" json:"last_msg_time"` // 用于列表排序
 	LastMsgSnapshot string `gorm:"column:last_msg_snapshot;type:varchar(500)" json:"last_msg_snapshot"`
 }
 

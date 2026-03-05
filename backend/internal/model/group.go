@@ -51,8 +51,8 @@ func (Group) TableName() string {
 // 群成员表
 type GroupMember struct {
 	ID             uint      `gorm:"primaryKey;autoIncrement;column:id;comment:自增ID" json:"id"`
-	GroupID        string    `gorm:"column:group_id;type:varchar(64);index;not null;comment:群ID" json:"groupID"`
-	UserID         int64     `gorm:"column:user_id;index;not null;comment:用户ID" json:"userID,string"`
+	GroupID        string    `gorm:"column:group_id;type:varchar(64);uniqueIndex:uk_group_user,priority:1;not null;comment:群ID" json:"groupID"`
+	UserID         int64     `gorm:"column:user_id;uniqueIndex:uk_group_user,priority:2;not null;comment:用户ID" json:"userID,string"`
 	Nickname       string    `gorm:"column:nickname;type:varchar(128);comment:昵称" json:"nickname"`
 	AvatarURL      string    `gorm:"column:avatar_url;type:varchar(255);comment:头像" json:"avatarURL"`
 	RoleLevel      int32     `gorm:"column:role_level;comment:角色等级" json:"roleLevel"`

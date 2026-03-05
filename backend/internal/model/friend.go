@@ -42,8 +42,8 @@ func SelectFriendRequestInfo(tx *gorm.DB) *gorm.DB {
 
 type Friend struct {
 	ID             int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id,string"`
-	OwnerUserID    int64     `gorm:"column:owner_user_id;not null;index;comment:所有者" json:"ownerUserID,string"`
-	FriendUserID   int64     `gorm:"column:friend_user_id;not null;index;comment:好友" json:"friendUserID,string"`
+	OwnerUserID    int64     `gorm:"column:owner_user_id;not null;uniqueIndex:uk_owner_friend,priority:1;comment:所有者" json:"ownerUserID,string"`
+	FriendUserID   int64     `gorm:"column:friend_user_id;not null;uniqueIndex:uk_owner_friend,priority:2;comment:好友" json:"friendUserID,string"`
 	Remark         string    `gorm:"column:remark;type:varchar(255);comment:备注" json:"remark"`
 	CreatedAt      time.Time `gorm:"column:created_at;autoCreateTime" json:"createdAt"`
 	UpdatedAt      time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updatedAt"`
