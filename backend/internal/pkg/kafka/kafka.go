@@ -39,5 +39,8 @@ func NewSyncProducer() (sarama.SyncProducer, error) {
 }
 
 func NewConsumerGroup(groupID string) (sarama.ConsumerGroup, error) {
-	return sarama.NewConsumerGroup(conf.Addr, groupID, nil)
+	kfk := sarama.NewConfig()
+	kfk.Consumer.Offsets.Initial = sarama.OffsetNewest
+	// kfk.Consumer.Offsets.AutoCommit.Enable = false
+	return sarama.NewConsumerGroup(conf.Addr, groupID, kfk)
 }

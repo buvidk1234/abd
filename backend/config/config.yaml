@@ -8,7 +8,7 @@ redis:
 kafka:
   addr:
     - "localhost:9092"
-  producerAck: "WaitForLocal"
+  producerAck: "WaitForAll"
   compressType: "none"
 
 database:
