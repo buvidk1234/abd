@@ -2,8 +2,8 @@ redis:
   addr: "localhost:6379"
   password: "123456"
   db: 0
-  pool_size: 10
-  min_idle_conns: 2
+  pool_size: 100
+  min_idle_conns: 10
 
 kafka:
   addr:
@@ -14,8 +14,8 @@ kafka:
 database:
   driver: "mysql"
   dsn: "root:123@tcp(localhost:3306)/abd?charset=utf8mb4&parseTime=True&loc=Local"
-  max_open_conns: 25
-  max_idle_conns: 10
+  max_open_conns: 100
+  max_idle_conns: 50
 
 server:
   http_addr: ":8080"           # Gin HTTP 服务端口

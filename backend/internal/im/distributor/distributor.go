@@ -42,9 +42,17 @@ func (d *Distributor) Start() {
 		return service.GetConversationID(val.ConvType, val.SenderID, val.TargetID)
 	}
 
-	onlinePushProducer, _ := kafka.NewSyncProducer()
+	onlinePushProducer, err := kafka.NewSyncProducer()
+	if err != nil {
+		log.Printf("distributor: failed to create onlinePushProducer: %v", err)
+	}
 
 	batchprocessor.Do = func(ctx context.Context, channelID int, msgs []*service.SendMessageReq) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("distributor: Do panic recovered: %v", r)
+			}
+		}()
 		// TODO:
 		/*
 			1. 存储消息到缓存
@@ -88,12 +96,17 @@ func (d *Distributor) Start() {
 		go d.repo.BatchStoreMsgToDB(context.Background(), msgsToStore)
 
 		// 2. 发送消息给在线用户
-		for _, msg := range msgsToStore {
-			data, _ := json.Marshal(msg)
-			onlinePushProducer.SendMessage(&sarama.ProducerMessage{
-				Topic: kafka.OnlinePushTopic,
-				Value: sarama.ByteEncoder(data),
-			})
+		if onlinePushProducer != nil {
+			for _, msg := range msgsToStore {
+				data, _ := json.Marshal(msg)
+				_, _, err := onlinePushProducer.SendMessage(&sarama.ProducerMessage{
+					Topic: kafka.OnlinePushTopic,
+					Value: sarama.ByteEncoder(data),
+				})
+				if err != nil {
+					log.Printf("distributor: onlinePushProducer.SendMessage error: %v", err)
+				}
+			}
 		}
 	}
 

@@ -12,8 +12,11 @@ import (
 	"backend/internal/pkg/prommetrics"
 	"backend/internal/pkg/snowflake"
 	"context"
+	"io"
+	"log"
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/goccy/go-yaml"
 )
 
@@ -41,6 +44,11 @@ func main() {
 	database.Init(cfg.Database)
 	snowflake.Init(cfg.Snowflake)
 	kafka.Init(cfg.Kafka)
+
+	if os.Getenv("ABD_SILENT") == "1" {
+		log.SetOutput(io.Discard)
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	db := database.GetDB()
 	db.AutoMigrate(&model.User{})
